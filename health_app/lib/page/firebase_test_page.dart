@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_data_service.dart';
+import '../services/hybrid_data_service.dart';
 
 class FirebaseTestPage extends StatefulWidget {
   const FirebaseTestPage({super.key});
@@ -11,6 +12,7 @@ class FirebaseTestPage extends StatefulWidget {
 
 class _FirebaseTestPageState extends State<FirebaseTestPage> {
   final FirebaseDataService _firebaseService = FirebaseDataService();
+  final HybridDataService _hybridService = HybridDataService();
   bool _isLoading = false;
   String _status = 'Ready to test Firebase';
 
@@ -82,14 +84,20 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
             Expanded(
               child: ListView(
                 children: [
+                  ElevatedButton.icon(
+                    onPressed: _showCurrentData,
+                    icon: const Icon(Icons.info),
+                    label: const Text('Show Current App Data'),
+                  ),
+                  const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: user == null ? null : _testSaveSession,
-                    child: const Text('Test Save Session'),
+                    child: const Text('Test Save Session (Real Data)'),
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: user == null ? null : _testSaveDailySummary,
-                    child: const Text('Test Save Daily Summary'),
+                    child: const Text('Test Save Daily Summary (Real Data)'),
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
@@ -126,26 +134,58 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
   Future<void> _testSaveSession() async {
     setState(() {
       _isLoading = true;
-      _status = 'Saving session to Firebase...';
+      _status = 'Getting current app data and saving to Firebase...';
     });
 
     try {
-      await _firebaseService.saveTrackingSession(
-        distance: 2.5,
-        calories: 150,
-        duration: 30,
-        activityType: 'walking',
-        startTime: DateTime.now().subtract(const Duration(minutes: 30)),
-        endTime: DateTime.now(),
-        route: [
+      // Lấy dữ liệu thực tế từ hybrid service
+      final dailyDistance = _hybridService.dailyDistance;
+      final dailyCalories = _hybridService.dailyCalories;
+      final dailySteps = _hybridService.dailySteps;
+
+      // Tạo route mẫu dựa trên dữ liệu thực tế (giả lập)
+      final routePoints = <Map<String, dynamic>>[];
+      if (dailyDistance > 0) {
+        // Tạo route points dựa trên khoảng cách thực tế
+        final numPoints = (dailyDistance * 4).round().clamp(2, 20); // 4 điểm/km
+        for (int i = 0; i < numPoints; i++) {
+          routePoints.add({
+            'latitude': 10.762622 + (i * 0.001), // Tọa độ TP.HCM với offset nhỏ
+            'longitude': 106.660172 + (i * 0.001),
+          });
+        }
+      } else {
+        // Nếu chưa có dữ liệu, tạo route mẫu ngắn
+        routePoints.addAll([
           {'latitude': 10.762622, 'longitude': 106.660172},
           {'latitude': 10.762722, 'longitude': 106.660272},
-        ],
+        ]);
+      }
+
+      await _firebaseService.saveTrackingSession(
+        distance: dailyDistance > 0 ? dailyDistance : 1.5,
+        calories: dailyCalories > 0 ? dailyCalories : 120,
+        duration: dailyDistance > 0
+            ? (dailyDistance * 12).round()
+            : 18, // ~12 phút/km
+        activityType: 'walking',
+        startTime: DateTime.now().subtract(
+          Duration(
+            minutes: dailyDistance > 0 ? (dailyDistance * 12).round() : 18,
+          ),
+        ),
+        endTime: DateTime.now(),
+        route: routePoints,
       );
 
       setState(() {
         _status =
-            'Session saved successfully! Check Firebase Console -> users/{your-uid}/activities';
+            'Session saved successfully!\n'
+            'Distance: ${dailyDistance > 0 ? dailyDistance.toStringAsFixed(2) : '1.50'} km\n'
+            'Calories: ${dailyCalories > 0 ? dailyCalories.round() : 120}\n'
+            'Steps: $dailySteps\n'
+            'Route points: ${routePoints.length}\n\n'
+            'Check Firebase Console -> users/{your-uid}/activities';
       });
     } catch (e) {
       setState(() {
@@ -159,21 +199,32 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
   Future<void> _testSaveDailySummary() async {
     setState(() {
       _isLoading = true;
-      _status = 'Saving daily summary to Firebase...';
+      _status = 'Getting current daily data and saving to Firebase...';
     });
 
     try {
+      // Lấy dữ liệu thực tế từ hybrid service
+      final dailyDistance = _hybridService.dailyDistance;
+      final dailyCalories = _hybridService.dailyCalories;
+      final dailySteps = _hybridService.dailySteps;
+      final todaySessions = _hybridService.todaySessions;
+
       await _firebaseService.saveDailySummary(
         date: DateTime.now(),
-        totalDistance: 2.5,
-        totalCalories: 150,
-        totalSteps: 3250,
-        sessionCount: 1,
+        totalDistance: dailyDistance,
+        totalCalories: dailyCalories,
+        totalSteps: dailySteps,
+        sessionCount: todaySessions.length,
       );
 
       setState(() {
         _status =
-            'Daily summary saved! Check Firebase Console -> users/{your-uid}/daily_summaries';
+            'Daily summary saved!\n'
+            'Distance: ${dailyDistance.toStringAsFixed(2)} km\n'
+            'Calories: ${dailyCalories.round()}\n'
+            'Steps: $dailySteps\n'
+            'Sessions: ${todaySessions.length}\n\n'
+            'Check Firebase Console -> users/{your-uid}/daily_summaries';
       });
     } catch (e) {
       setState(() {
@@ -224,5 +275,22 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _showCurrentData() {
+    final dailyDistance = _hybridService.dailyDistance;
+    final dailyCalories = _hybridService.dailyCalories;
+    final dailySteps = _hybridService.dailySteps;
+    final todaySessions = _hybridService.todaySessions;
+
+    setState(() {
+      _status =
+          'Current App Data:\n'
+          '📏 Distance: ${dailyDistance.toStringAsFixed(2)} km\n'
+          '🔥 Calories: ${dailyCalories.round()}\n'
+          '👣 Steps: $dailySteps\n'
+          '📊 Sessions today: ${todaySessions.length}\n\n'
+          'This data will be used when you test Firebase save functions.';
+    });
   }
 }
