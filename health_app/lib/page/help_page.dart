@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
+import 'data_storage_comparison_page.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
@@ -63,6 +64,20 @@ class HelpPage extends StatelessWidget {
                     subtitle: 'Frequently asked questions',
                   ),
                   HelpTile(
+                    icon: Icons.storage,
+                    title: 'Data Storage Comparison',
+                    subtitle: 'Compare local vs hybrid storage',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const DataStorageComparisonPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  HelpTile(
                     icon: Icons.contact_support,
                     title: 'Contact Support',
                     subtitle: 'Get in touch with our support team',
@@ -91,12 +106,14 @@ class HelpTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   const HelpTile({
     super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   @override
@@ -108,12 +125,14 @@ class HelpTile extends StatelessWidget {
         title: Text(title),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          // Handle help item tap
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('$title tapped')));
-        },
+        onTap:
+            onTap ??
+            () {
+              // Handle help item tap
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('$title tapped')));
+            },
       ),
     );
   }

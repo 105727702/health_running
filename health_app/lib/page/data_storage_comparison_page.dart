@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/health_dashboard.dart';
 import '../widgets/hybrid_health_dashboard.dart';
+import 'firebase_test_page.dart'; // Add this import
 
 class DataStorageComparisonPage extends StatefulWidget {
   const DataStorageComparisonPage({super.key});
@@ -100,6 +101,22 @@ class _DataStorageComparisonPageState extends State<DataStorageComparisonPage>
                 // Hybrid Tab
                 HybridHealthDashboard(),
               ],
+            ),
+          ),
+
+          // Firebase Test Page Button
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FirebaseTestPage(),
+                  ),
+                );
+              },
+              child: const Text('Test Firebase'),
             ),
           ),
         ],

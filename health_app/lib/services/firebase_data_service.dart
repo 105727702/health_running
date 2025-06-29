@@ -45,14 +45,23 @@ class FirebaseDataService {
         'activityType': activityType,
         'startTime': startTime.toIso8601String(),
         'endTime': endTime.toIso8601String(),
-        'route': route
-            .map(
-              (point) => {
-                'latitude': point.latitude,
-                'longitude': point.longitude,
-              },
-            )
-            .toList(),
+        'route': route.map((point) {
+          // Handle both LatLng objects and Map objects
+          if (point is Map<String, dynamic>) {
+            return {
+              'latitude': point['latitude'] ?? 0.0,
+              'longitude': point['longitude'] ?? 0.0,
+            };
+          } else {
+            // Assume it's a LatLng object or similar with latitude/longitude properties
+            try {
+              return {'latitude': point.latitude, 'longitude': point.longitude};
+            } catch (e) {
+              // Fallback for unexpected data types
+              return {'latitude': 0.0, 'longitude': 0.0};
+            }
+          }
+        }).toList(),
         'createdAt': FieldValue.serverTimestamp(),
         'date': _formatDate(startTime),
       };

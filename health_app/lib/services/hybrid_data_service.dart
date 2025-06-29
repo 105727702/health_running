@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/tracking_state.dart';
 import '../models/user_goals.dart';
 import 'firebase_data_service.dart';
@@ -84,6 +85,16 @@ class HybridDataService {
   // Save session (both local and Firebase)
   Future<void> saveSession(TrackingState finalState) async {
     if (finalState.totalDistance > 0) {
+      // Convert LatLng route points to Map format for consistent storage
+      final routeData = finalState.route
+          .map(
+            (point) => {
+              'latitude': point.latitude,
+              'longitude': point.longitude,
+            },
+          )
+          .toList();
+
       final session = TrackingSession(
         distance: finalState.totalDistance,
         calories: finalState.totalCalories,
@@ -91,7 +102,7 @@ class HybridDataService {
         activityType: finalState.activityType,
         startTime: DateTime.now().subtract(const Duration(minutes: 30)),
         endTime: DateTime.now(),
-        route: finalState.route,
+        route: routeData,
       );
 
       // Always save locally first
@@ -611,6 +622,24 @@ class TrackingSession {
   }
 
   factory TrackingSession.fromJson(Map<String, dynamic> json) {
+    // Handle route data conversion from Firebase
+    List<dynamic> routeData = [];
+    if (json['route'] != null) {
+      final rawRoute = json['route'] as List<dynamic>;
+      routeData = rawRoute.map((point) {
+        if (point is GeoPoint) {
+          // Convert GeoPoint back to our expected format
+          return {'latitude': point.latitude, 'longitude': point.longitude};
+        } else if (point is Map<String, dynamic>) {
+          // Already in the expected format
+          return point;
+        } else {
+          // Fallback for unexpected data types
+          return {'latitude': 0.0, 'longitude': 0.0};
+        }
+      }).toList();
+    }
+
     return TrackingSession(
       distance: json['distance']?.toDouble() ?? 0.0,
       calories: json['calories']?.toDouble() ?? 0.0,
@@ -618,7 +647,7 @@ class TrackingSession {
       activityType: json['activityType'] ?? 'walking',
       startTime: DateTime.parse(json['startTime']),
       endTime: DateTime.parse(json['endTime']),
-      route: json['route'] ?? [],
+      route: routeData,
     );
   }
 }
