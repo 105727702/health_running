@@ -3,9 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'Login_Screen.dart';
 import 'goals_settings_page.dart';
 import 'data_management_page.dart';
-import 'firebase_test_demo_page.dart';
-import '../services/role_service.dart';
-import '../utils/firebase_utils.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -263,132 +260,6 @@ class SettingsPage extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // Admin Firebase Test Section
-                FutureBuilder<UserRole>(
-                  future: RoleService().getCurrentUserRole(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data == UserRole.admin) {
-                      return Column(
-                        children: [
-                          Card(
-                            elevation: 6,
-                            shadowColor: Colors.deepOrange.withOpacity(0.3),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.deepOrange.withOpacity(0.1),
-                                    Colors.deepOrange.withOpacity(0.05),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepOrange.withOpacity(
-                                          0.2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(
-                                        Icons.admin_panel_settings,
-                                        color: Colors.deepOrange,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    title: const Text(
-                                      'Admin Panel',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    subtitle: const Text(
-                                      'Advanced tools for administrators',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  const Divider(height: 1),
-                                  _buildAdminSettingsItem(
-                                    context,
-                                    icon: Icons.science,
-                                    title: 'Firebase Test',
-                                    subtitle:
-                                        'Test Firebase services & analytics',
-                                    onTap: () async {
-                                      await FirebaseUtils.trackButtonTap(
-                                        'firebase_test_admin',
-                                        screenName: 'settings',
-                                      );
-                                      // ignore: use_build_context_synchronously
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const FirebaseTestPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  _buildDivider(),
-                                  _buildAdminSettingsItem(
-                                    context,
-                                    icon: Icons.analytics,
-                                    title: 'Analytics Dashboard',
-                                    subtitle: 'View app usage analytics',
-                                    onTap: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Analytics Dashboard - Coming soon!',
-                                          ),
-                                          backgroundColor: Colors.deepOrange,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  _buildDivider(),
-                                  _buildAdminSettingsItem(
-                                    context,
-                                    icon: Icons.bug_report,
-                                    title: 'Crash Reports',
-                                    subtitle: 'View error logs & crashes',
-                                    onTap: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Crash Reports - Coming soon!',
-                                          ),
-                                          backgroundColor: Colors.deepOrange,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-
                 // Logout Button
                 Container(
                   width: double.infinity,
@@ -481,49 +352,6 @@ class SettingsPage extends StatelessWidget {
       color: Colors.grey.withOpacity(0.2),
       indent: 68,
       endIndent: 20,
-    );
-  }
-
-  Widget _buildAdminSettingsItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.deepOrange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: Colors.deepOrange, size: 24),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.deepOrange.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.deepOrange,
-        ),
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      hoverColor: Colors.deepOrange.withOpacity(0.05),
     );
   }
 

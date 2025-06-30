@@ -190,32 +190,58 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: _isSignUpMode
-                ? SignUpForm(
-                    usernameController: _usernameController,
-                    emailController: _emailController,
-                    passwordController: _passwordController,
-                    formKey: _formKey,
-                    onSignUp: _handleSignUp,
-                    isLoading: _isLoading,
-                    onSwitchToLogin: _switchMode,
-                  )
-                : LoginForm(
-                    usernameController:
-                        _emailController, // Using for email in login
-                    passwordController: _passwordController,
-                    formKey: _formKey,
-                    onLogin: _handleLogin,
-                    onGoogleSignIn: _handleGoogleSignIn,
-                    isLoading: _isLoading,
-                    isGoogleLoading: _isGoogleLoading,
-                    onSwitchToSignUp: _switchMode,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.deepPurple.shade400,
+              Colors.deepPurple.shade600,
+              Colors.deepPurple.shade800,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Card(
+                elevation: 8,
+                shadowColor: Colors.black.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
                   ),
+                  child: _isSignUpMode
+                      ? SignUpForm(
+                          usernameController: _usernameController,
+                          emailController: _emailController,
+                          passwordController: _passwordController,
+                          formKey: _formKey,
+                          onSignUp: _handleSignUp,
+                          isLoading: _isLoading,
+                          onSwitchToLogin: _switchMode,
+                        )
+                      : LoginForm(
+                          usernameController:
+                              _emailController, // Using for email in login
+                          passwordController: _passwordController,
+                          formKey: _formKey,
+                          onLogin: _handleLogin,
+                          onGoogleSignIn: _handleGoogleSignIn,
+                          isLoading: _isLoading,
+                          isGoogleLoading: _isGoogleLoading,
+                          onSwitchToSignUp: _switchMode,
+                        ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

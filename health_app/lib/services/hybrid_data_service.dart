@@ -30,6 +30,7 @@ class HybridDataService {
     _checkAndResetDailyData();
     _startDailyResetTimer();
     _setupAuthListener();
+    _startPeriodicSync(); // Start periodic sync on initialization
   }
 
   // Stream controllers
@@ -62,6 +63,28 @@ class HybridDataService {
   List<TrackingSession> get todaySessions => _todaySessions;
   UserGoals get userGoals => _userGoals;
 
+  // Debug methods to help understand data discrepancies
+  double get currentTrackingDistance => _currentState.totalDistance;
+  double get currentTrackingCalories => _currentState.totalCalories;
+  bool get isCurrentlyTracking => _currentState.isTracking;
+
+  // Get combined data (saved sessions + current tracking if active)
+  double get combinedTotalDistance {
+    double total = _dailyDistance;
+    if (_currentState.isTracking) {
+      total += _currentState.totalDistance;
+    }
+    return total;
+  }
+
+  double get combinedTotalCalories {
+    double total = _dailyCalories;
+    if (_currentState.isTracking) {
+      total += _currentState.totalCalories;
+    }
+    return total;
+  }
+
   // Setup auth listener for sync
   void _setupAuthListener() {
     _auth.authStateChanges().listen((User? user) {
@@ -77,9 +100,8 @@ class HybridDataService {
     _currentState = newState;
     _trackingStateController.add(newState);
 
-    if (newState.isTracking) {
-      _updateDailyTotals(newState);
-    }
+    // No need to update daily totals here since they should only come from saved sessions
+    // The daily totals represent completed sessions, not the current ongoing tracking
   }
 
   // Save session (both local and Firebase)
@@ -107,7 +129,8 @@ class HybridDataService {
 
       // Always save locally first
       _todaySessions.add(session);
-      _updateDailyTotals(finalState);
+      // Recalculate daily totals from all sessions (not just replace with current state)
+      _updateDailyTotalsFromSessions();
       await _saveLocalData();
 
       // Try to save to Firebase if user is authenticated
@@ -223,7 +246,7 @@ class HybridDataService {
     final now = DateTime.now();
     double totalDistance = _dailyDistance;
     double totalCalories = _dailyCalories;
-    double totalStepsDouble = _dailySteps.toDouble();
+    double totalSteps = _dailySteps.toDouble();
     int activeDays = _todaySessions.isNotEmpty ? 1 : 0;
 
     // Get historical data (already combines local and Firebase)
@@ -238,7 +261,7 @@ class HybridDataService {
       if (dayData != null) {
         totalDistance += dayData.totalDistance;
         totalCalories += dayData.totalCalories;
-        totalStepsDouble += dayData.totalSteps.toDouble();
+        totalSteps += dayData.totalSteps.toDouble();
         if (dayData.sessionCount > 0) activeDays++;
       }
     }
@@ -246,7 +269,7 @@ class HybridDataService {
     return WeeklySummary(
       totalDistance: totalDistance,
       totalCalories: totalCalories,
-      totalSteps: totalStepsDouble.round(),
+      totalSteps: totalSteps.round(),
       activeDays: activeDays,
       averageDistance: totalDistance / 7,
       averageCalories: totalCalories / 7,
@@ -362,13 +385,8 @@ class HybridDataService {
   // Private methods
   Map<String, DailySummary> _historicalData = {};
 
-  void _updateDailyTotals(TrackingState state) {
-    _dailyDistance = state.totalDistance;
-    _dailyCalories = state.totalCalories;
-    _dailySteps = (_dailyDistance * 1300).round();
-  }
-
   void _updateDailyTotalsFromSessions() {
+    // Calculate daily totals from all saved sessions for today
     _dailyDistance = _todaySessions.fold(
       0.0,
       (sum, session) => sum + session.distance,
@@ -398,7 +416,7 @@ class HybridDataService {
 
     // Save yesterday's data to history
     if (_dailyDistance > 0 || _todaySessions.isNotEmpty) {
-      _historicalData[yesterday] = DailySummary(
+      final yesterdaySummary = DailySummary(
         date: yesterday,
         totalDistance: _dailyDistance,
         totalCalories: _dailyCalories,
@@ -406,6 +424,11 @@ class HybridDataService {
         sessionCount: _todaySessions.length,
         sessions: List.from(_todaySessions),
       );
+
+      _historicalData[yesterday] = yesterdaySummary;
+
+      // Auto-save yesterday's data to Firebase
+      _autoSaveToFirebase(yesterdaySummary);
     }
 
     // Reset today's data
@@ -430,6 +453,124 @@ class HybridDataService {
         _performDailyReset();
       });
     });
+  }
+
+  // Periodic sync check - runs every hour when app is active
+  Timer? _periodicSyncTimer;
+
+  void _startPeriodicSync() {
+    _periodicSyncTimer?.cancel();
+    _periodicSyncTimer = Timer.periodic(const Duration(hours: 1), (timer) {
+      _performPeriodicSync();
+    });
+  }
+
+  Future<void> _performPeriodicSync() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Sync offline queue if any
+      if (_offlineSessionsQueue.isNotEmpty) {
+        print(
+          '🔄 Periodic sync: Syncing ${_offlineSessionsQueue.length} offline sessions...',
+        );
+        await _syncOfflineData();
+      }
+
+      // Auto-save current day if significant activity
+      if (_dailyDistance > 0.5 || _todaySessions.length >= 2) {
+        print('🔄 Periodic sync: Auto-saving current day data...');
+        await _firebaseService.saveDailySummary(
+          date: DateTime.now(),
+          totalDistance: _dailyDistance,
+          totalCalories: _dailyCalories,
+          totalSteps: _dailySteps,
+          sessionCount: _todaySessions.length,
+        );
+      }
+    } catch (e) {
+      print('❌ Periodic sync failed: $e');
+    }
+  }
+
+  // Get auto-save status for UI display
+  Map<String, dynamic> getAutoSaveStatus() {
+    final user = _auth.currentUser;
+    return {
+      'isEnabled': user != null,
+      'nextDailyReset': _getNextResetTime(),
+      'nextPeriodicSync': _getNextSyncTime(),
+      'offlineQueueCount': _offlineSessionsQueue.length,
+      'lastResetDate': _lastResetDate,
+    };
+  }
+
+  String _getNextResetTime() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final timeUntil = tomorrow.difference(now);
+
+    final hours = timeUntil.inHours;
+    final minutes = timeUntil.inMinutes % 60;
+
+    return '${hours}h ${minutes}m';
+  }
+
+  String _getNextSyncTime() {
+    if (_periodicSyncTimer == null) return 'Disabled';
+
+    // Estimate next sync (this is approximate since Timer doesn't give us exact next time)
+    final now = DateTime.now();
+    final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
+    final timeUntil = nextHour.difference(now);
+
+    final minutes = timeUntil.inMinutes;
+    return '${minutes}m';
+  }
+
+  // Manual trigger for immediate backup (for testing or user request)
+  Future<void> manualBackupToFirebase() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      print('🔄 Manual backup initiated...');
+
+      // Save current day data
+      if (_dailyDistance > 0 || _todaySessions.isNotEmpty) {
+        await _firebaseService.saveDailySummary(
+          date: DateTime.now(),
+          totalDistance: _dailyDistance,
+          totalCalories: _dailyCalories,
+          totalSteps: _dailySteps,
+          sessionCount: _todaySessions.length,
+        );
+
+        // Save individual sessions
+        for (final session in _todaySessions) {
+          await _firebaseService.saveTrackingSession(
+            distance: session.distance,
+            calories: session.calories,
+            duration: session.duration,
+            activityType: session.activityType,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            route: session.route,
+          );
+        }
+      }
+
+      // Sync offline queue
+      await _syncOfflineData();
+
+      print('✅ Manual backup completed successfully');
+    } catch (e) {
+      print('❌ Manual backup failed: $e');
+      rethrow;
+    }
   }
 
   // Local data storage methods
@@ -584,8 +725,244 @@ class HybridDataService {
 
   void dispose() {
     _dailyResetTimer?.cancel();
+    _periodicSyncTimer?.cancel();
     _trackingStateController.close();
     _dataChangeController.close();
+  }
+
+  // Auto-save daily summary to Firebase (background operation)
+  Future<void> _autoSaveToFirebase(DailySummary summary) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      print('📦 Auto-save skipped: User not authenticated');
+      return;
+    }
+
+    try {
+      print('📦 Auto-saving daily summary to Firebase for ${summary.date}...');
+
+      // Parse the date string back to DateTime
+      final dateParts = summary.date.split('-');
+      final date = DateTime(
+        int.parse(dateParts[0]),
+        int.parse(dateParts[1]),
+        int.parse(dateParts[2]),
+      );
+
+      await _firebaseService.saveDailySummary(
+        date: date,
+        totalDistance: summary.totalDistance,
+        totalCalories: summary.totalCalories,
+        totalSteps: summary.totalSteps,
+        sessionCount: summary.sessionCount,
+      );
+
+      // Also save individual sessions if they haven't been saved yet
+      for (final session in summary.sessions) {
+        try {
+          await _firebaseService.saveTrackingSession(
+            distance: session.distance,
+            calories: session.calories,
+            duration: session.duration,
+            activityType: session.activityType,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            route: session.route,
+          );
+        } catch (e) {
+          print('⚠️ Failed to save session to Firebase: $e');
+          // Continue with other sessions even if one fails
+        }
+      }
+
+      print('✅ Auto-save completed successfully for ${summary.date}');
+    } catch (e) {
+      print('❌ Auto-save failed for ${summary.date}: $e');
+      // Add to offline queue for later sync
+      _addToOfflineQueue(summary);
+    }
+  }
+
+  // Add failed auto-saves to offline queue
+  void _addToOfflineQueue(DailySummary summary) {
+    try {
+      for (final session in summary.sessions) {
+        _offlineSessionsQueue.add(session.toJson());
+      }
+      _saveOfflineQueue();
+      print('📝 Added ${summary.sessions.length} sessions to offline queue');
+    } catch (e) {
+      print('❌ Failed to add to offline queue: $e');
+    }
+  }
+
+  // Delete session from both local storage and Firebase
+  Future<void> deleteSession(String sessionId, DateTime sessionDate) async {
+    try {
+      // Delete from Firebase first if user is authenticated
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firebaseService.deleteSession(sessionId);
+      }
+
+      // Delete from local storage
+      final dateString = _formatDate(sessionDate);
+      
+      // If it's today's session, remove from today's sessions
+      if (dateString == _formatDate(DateTime.now())) {
+        _todaySessions.removeWhere((session) => session.toJson().toString().contains(sessionId));
+        _updateDailyTotalsFromSessions();
+        await _saveLocalData();
+      } else {
+        // Remove from historical data
+        if (_historicalData.containsKey(dateString)) {
+          final dayData = _historicalData[dateString]!;
+          dayData.sessions.removeWhere((session) => session.toJson().toString().contains(sessionId));
+          
+          // Update daily totals for that day
+          double dayDistance = 0, dayCalories = 0;
+          int daySteps = 0;
+          for (final session in dayData.sessions) {
+            dayDistance += session.distance;
+            dayCalories += session.calories;
+            daySteps += (session.distance * 1000).round(); // Rough steps calculation
+          }
+          
+          _historicalData[dateString] = DailySummary(
+            date: dateString,
+            totalDistance: dayDistance,
+            totalCalories: dayCalories,
+            totalSteps: daySteps,
+            sessionCount: dayData.sessions.length,
+            sessions: dayData.sessions,
+          );
+          
+          await _saveLocalData();
+        }
+      }
+
+      _dataChangeController.add(true);
+      print('Session deleted successfully');
+    } catch (e) {
+      print('Error deleting session: $e');
+      throw e;
+    }
+  }
+
+  // Update session in both local storage and Firebase
+  Future<void> updateSession({
+    required String sessionId,
+    required DateTime sessionDate,
+    required double distance,
+    required double calories,
+    required int duration,
+    required String activityType,
+    required DateTime startTime,
+    required DateTime endTime,
+    required List<dynamic> route,
+  }) async {
+    try {
+      // Update in Firebase first if user is authenticated
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firebaseService.updateSession(
+          sessionId: sessionId,
+          distance: distance,
+          calories: calories,
+          duration: duration,
+          activityType: activityType,
+          startTime: startTime,
+          endTime: endTime,
+          route: route,
+        );
+      }
+
+      // Create updated session
+      final updatedSession = TrackingSession(
+        distance: distance,
+        calories: calories,
+        duration: duration,
+        activityType: activityType,
+        startTime: startTime,
+        endTime: endTime,
+        route: route,
+      );
+
+      // Update in local storage
+      final dateString = _formatDate(sessionDate);
+      
+      // If it's today's session, update today's sessions
+      if (dateString == _formatDate(DateTime.now())) {
+        final index = _todaySessions.indexWhere((session) => 
+          session.toJson().toString().contains(sessionId));
+        if (index != -1) {
+          _todaySessions[index] = updatedSession;
+          _updateDailyTotalsFromSessions();
+          await _saveLocalData();
+        }
+      } else {
+        // Update in historical data
+        if (_historicalData.containsKey(dateString)) {
+          final dayData = _historicalData[dateString]!;
+          final index = dayData.sessions.indexWhere((session) => 
+            session.toJson().toString().contains(sessionId));
+          
+          if (index != -1) {
+            dayData.sessions[index] = updatedSession;
+            
+            // Recalculate daily totals for that day
+            double dayDistance = 0, dayCalories = 0;
+            int daySteps = 0;
+            for (final session in dayData.sessions) {
+              dayDistance += session.distance;
+              dayCalories += session.calories;
+              daySteps += (session.distance * 1000).round(); // Rough steps calculation
+            }
+            
+            _historicalData[dateString] = DailySummary(
+              date: dateString,
+              totalDistance: dayDistance,
+              totalCalories: dayCalories,
+              totalSteps: daySteps,
+              sessionCount: dayData.sessions.length,
+              sessions: dayData.sessions,
+            );
+            
+            await _saveLocalData();
+          }
+        }
+      }
+
+      _dataChangeController.add(true);
+      print('Session updated successfully');
+    } catch (e) {
+      print('Error updating session: $e');
+      throw e;
+    }
+  }
+
+  // Get session by ID for editing
+  TrackingSession? getSessionById(String sessionId, DateTime sessionDate) {
+    final dateString = _formatDate(sessionDate);
+    
+    // Check today's sessions
+    if (dateString == _formatDate(DateTime.now())) {
+      return _todaySessions.firstWhere(
+        (session) => session.toJson().toString().contains(sessionId),
+        orElse: () => throw StateError('Session not found'),
+      );
+    } else {
+      // Check historical data
+      if (_historicalData.containsKey(dateString)) {
+        final dayData = _historicalData[dateString]!;
+        return dayData.sessions.firstWhere(
+          (session) => session.toJson().toString().contains(sessionId),
+          orElse: () => throw StateError('Session not found'),
+        );
+      }
+    }
+    
+    return null;
   }
 }
 

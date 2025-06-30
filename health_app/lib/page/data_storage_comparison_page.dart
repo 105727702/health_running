@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/health_dashboard.dart';
 import '../widgets/hybrid_health_dashboard.dart';
+import '../services/role_service.dart';
 import 'firebase_test_page.dart'; // Add this import
 
 class DataStorageComparisonPage extends StatefulWidget {
@@ -14,11 +15,21 @@ class DataStorageComparisonPage extends StatefulWidget {
 class _DataStorageComparisonPageState extends State<DataStorageComparisonPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final RoleService _roleService = RoleService();
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _checkUserRole();
+  }
+
+  Future<void> _checkUserRole() async {
+    final isAdmin = await _roleService.isCurrentUserAdmin();
+    setState(() {
+      _isAdmin = isAdmin;
+    });
   }
 
   @override
@@ -29,11 +40,88 @@ class _DataStorageComparisonPageState extends State<DataStorageComparisonPage>
 
   @override
   Widget build(BuildContext context) {
+    // Check if user is admin
+    if (!_isAdmin) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Access Restricted'),
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.admin_panel_settings,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Admin Access Required',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'This page is restricted to admin users only. '
+                      'Data storage comparison and testing features require admin privileges.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Go Back'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Data Storage Comparison'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        actions: [
+          // Admin indicator
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.admin_panel_settings, size: 16),
+                const SizedBox(width: 4),
+                Text('Admin', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

@@ -111,7 +111,7 @@ class _MainScreenState extends State<MainScreen>
             }
           },
           backgroundColor: Colors.white,
-          elevation: 0,
+          elevation: 8,
           selectedItemColor: Colors.deepPurple,
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
@@ -219,6 +219,8 @@ class MainContentPage extends StatelessWidget {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
+        elevation: 4,
+        shadowColor: Colors.deepPurple.withOpacity(0.3),
         actions: [
           IconButton(
             icon: const Icon(Icons.flag),

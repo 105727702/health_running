@@ -228,6 +228,60 @@ class FirebaseDataService {
     }
   }
 
+  // Update session in Firestore
+  Future<void> updateSession({
+    required String sessionId,
+    required double distance,
+    required double calories,
+    required int duration,
+    required String activityType,
+    required DateTime startTime,
+    required DateTime endTime,
+    required List<dynamic> route,
+  }) async {
+    try {
+      final collection = _userCollection;
+      if (collection == null) {
+        print('User not authenticated');
+        return;
+      }
+
+      final sessionData = {
+        'distance': distance,
+        'calories': calories,
+        'duration': duration,
+        'activityType': activityType,
+        'startTime': startTime.toIso8601String(),
+        'endTime': endTime.toIso8601String(),
+        'route': route.map((point) {
+          // Handle both LatLng objects and Map objects
+          if (point is Map<String, dynamic>) {
+            return {
+              'latitude': point['latitude'] ?? 0.0,
+              'longitude': point['longitude'] ?? 0.0,
+            };
+          } else {
+            // Assume it's a LatLng object or similar with latitude/longitude properties
+            try {
+              return {'latitude': point.latitude, 'longitude': point.longitude};
+            } catch (e) {
+              // Fallback for unexpected data types
+              return {'latitude': 0.0, 'longitude': 0.0};
+            }
+          }
+        }).toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'date': _formatDate(startTime),
+      };
+
+      await collection.doc(sessionId).update(sessionData);
+      print('Session updated in Firebase successfully');
+    } catch (e) {
+      print('Error updating session in Firebase: $e');
+      // Don't throw - let app continue with local storage
+    }
+  }
+
   // Clear all user data from Firestore
   Future<void> clearAllUserData() async {
     try {

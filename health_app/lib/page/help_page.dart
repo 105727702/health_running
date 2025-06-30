@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
 import 'data_storage_comparison_page.dart';
+import '../services/role_service.dart';
 
-class HelpPage extends StatelessWidget {
+class HelpPage extends StatefulWidget {
   const HelpPage({super.key});
+
+  @override
+  State<HelpPage> createState() => _HelpPageState();
+}
+
+class _HelpPageState extends State<HelpPage> {
+  final RoleService _roleService = RoleService();
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole();
+  }
+
+  Future<void> _checkUserRole() async {
+    final isAdmin = await _roleService.isCurrentUserAdmin();
+    setState(() {
+      _isAdmin = isAdmin;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,20 +85,21 @@ class HelpPage extends StatelessWidget {
                     title: 'FAQ',
                     subtitle: 'Frequently asked questions',
                   ),
-                  HelpTile(
-                    icon: Icons.storage,
-                    title: 'Data Storage Comparison',
-                    subtitle: 'Compare local vs hybrid storage',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const DataStorageComparisonPage(),
-                        ),
-                      );
-                    },
-                  ),
+                  if (_isAdmin)
+                    HelpTile(
+                      icon: Icons.storage,
+                      title: 'Data Storage Comparison',
+                      subtitle: 'Compare local vs hybrid storage (Admin only)',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const DataStorageComparisonPage(),
+                          ),
+                        );
+                      },
+                    ),
                   HelpTile(
                     icon: Icons.contact_support,
                     title: 'Contact Support',

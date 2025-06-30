@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_data_service.dart';
 import '../services/hybrid_data_service.dart';
-import '../services/role_service.dart';
-import '../widgets/custom_edit_test_dialog.dart';
 
 class FirebaseTestPage extends StatefulWidget {
   const FirebaseTestPage({super.key});
@@ -15,23 +13,8 @@ class FirebaseTestPage extends StatefulWidget {
 class _FirebaseTestPageState extends State<FirebaseTestPage> {
   final FirebaseDataService _firebaseService = FirebaseDataService();
   final HybridDataService _hybridService = HybridDataService();
-  final RoleService _roleService = RoleService();
   bool _isLoading = false;
   String _status = 'Ready to test Firebase';
-  bool _isAdmin = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkUserRole();
-  }
-
-  Future<void> _checkUserRole() async {
-    final isAdmin = await _roleService.isCurrentUserAdmin();
-    setState(() {
-      _isAdmin = isAdmin;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,19 +68,16 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             const SizedBox(width: 8),
                             Text(
                               'User Status',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.deepPurple,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.deepPurple,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         _buildStatusRow(
-                          icon: user != null
-                              ? Icons.check_circle
-                              : Icons.cancel,
+                          icon: user != null ? Icons.check_circle : Icons.cancel,
                           iconColor: user != null ? Colors.green : Colors.red,
                           label: 'Signed in',
                           value: '${user != null}',
@@ -116,15 +96,6 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             iconColor: Colors.orange,
                             label: 'Email',
                             value: user.email ?? 'No email',
-                          ),
-                          const SizedBox(height: 8),
-                          _buildStatusRow(
-                            icon: _isAdmin
-                                ? Icons.admin_panel_settings
-                                : Icons.person,
-                            iconColor: _isAdmin ? Colors.purple : Colors.grey,
-                            label: 'Role',
-                            value: _isAdmin ? 'Admin' : 'User',
                           ),
                         ],
                       ],
@@ -169,11 +140,10 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             const SizedBox(width: 8),
                             Text(
                               'Firebase Status',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -240,16 +210,15 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             const SizedBox(width: 8),
                             Text(
                               'Test Functions',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-
+                        
                         // Data Test Buttons
                         _buildTestButton(
                           onPressed: _showCurrentData,
@@ -272,7 +241,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                           color: Colors.purple,
                         ),
                         const SizedBox(height: 12),
-
+                        
                         // Auto-save and Backup
                         _buildTestButton(
                           onPressed: _showAutoSaveStatus,
@@ -288,11 +257,11 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                           color: Colors.deepOrange,
                         ),
                         const SizedBox(height: 16),
-
+                        
                         // Divider
                         Divider(color: Colors.grey.shade300),
                         const SizedBox(height: 16),
-
+                        
                         // Data Management Section Header
                         Row(
                           children: [
@@ -304,62 +273,29 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             const SizedBox(width: 8),
                             Text(
                               'Data Management',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-
-                        // Edit and Delete Functions (Admin Only)
-                        if (_isAdmin) ...[
-                          _buildTestButton(
-                            onPressed: user == null ? null : _testEditData,
-                            icon: Icons.edit,
-                            label: 'Custom Session Creator/Editor (Admin)',
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTestButton(
-                            onPressed: user == null ? null : _testDeleteData,
-                            icon: Icons.delete_outline,
-                            label: 'Test Delete Session from Firebase',
-                            color: Colors.red,
-                          ),
-                        ] else ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.grey.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.lock_outline,
-                                  color: Colors.grey[600],
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Edit/Delete functions are restricted to admin users only',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        
+                        // Edit and Delete Functions
+                        _buildTestButton(
+                          onPressed: user == null ? null : _testEditData,
+                          icon: Icons.edit,
+                          label: 'Test Edit Session in Firebase',
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTestButton(
+                          onPressed: user == null ? null : _testDeleteData,
+                          icon: Icons.delete_outline,
+                          label: 'Test Delete Session from Firebase',
+                          color: Colors.red,
+                        ),
                       ],
                     ),
                   ),
@@ -402,39 +338,20 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             const SizedBox(width: 8),
                             Text(
                               'How to Test Delete & Edit',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.amber[700],
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.amber[700],
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        _buildInstructionStep(
-                          '1',
-                          'Make sure you are signed in as Admin',
-                        ),
-                        _buildInstructionStep(
-                          '2',
-                          'Create test sessions using "Test Save Session"',
-                        ),
-                        _buildInstructionStep(
-                          '3',
-                          'Use "Custom Edit Session Test" to modify with your own values',
-                        ),
-                        _buildInstructionStep(
-                          '4',
-                          'Use "Test Delete Session" to remove data',
-                        ),
-                        _buildInstructionStep(
-                          '5',
-                          'Check Firebase Console to verify changes',
-                        ),
-                        _buildInstructionStep(
-                          '6',
-                          'Go to History page to use the full edit/delete UI',
-                        ),
+                        _buildInstructionStep('1', 'Make sure you are signed in'),
+                        _buildInstructionStep('2', 'Create test sessions using "Test Save Session"'),
+                        _buildInstructionStep('3', 'Use "Test Edit Session" to modify existing data'),
+                        _buildInstructionStep('4', 'Use "Test Delete Session" to remove data'),
+                        _buildInstructionStep('5', 'Check Firebase Console to verify changes'),
+                        _buildInstructionStep('6', 'Go to History page to use the full edit/delete UI'),
                       ],
                     ),
                   ),
@@ -471,8 +388,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
       );
 
       setState(() {
-        _status =
-            '✅ Test session created!\nDistance: 2.5 km\nCalories: 180\nDuration: 25 min';
+        _status = '✅ Test session created!\nDistance: 2.5 km\nCalories: 180\nDuration: 25 min';
       });
     } catch (e) {
       setState(() {
@@ -492,8 +408,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     try {
       final sessions = await _firebaseService.getDailySessions(DateTime.now());
       setState(() {
-        _status =
-            '📋 Found ${sessions.length} sessions for today.\n'
+        _status = '📋 Found ${sessions.length} sessions for today.\n'
             'You can now test edit/delete functions.';
       });
     } catch (e) {
@@ -508,147 +423,46 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
   Future<void> _testEditData() async {
     setState(() {
       _isLoading = true;
-      _status = 'Preparing edit test...';
+      _status = 'Testing edit functionality...';
     });
 
     try {
-      final todaySessions = await _firebaseService.getDailySessions(
-        DateTime.now(),
-      );
+      final todaySessions = await _firebaseService.getDailySessions(DateTime.now());
 
-      setState(() => _isLoading = false);
+      if (todaySessions.isEmpty) {
+        setState(() {
+          _status = '⚠️ No sessions found. Create some test sessions first using "Test Save Session".';
+        });
+        return;
+      }
 
-      // Show custom edit dialog (works even without existing sessions)
-      await showDialog(
-        context: context,
-        builder: (context) => CustomEditTestDialog(
-          existingSession: todaySessions.isNotEmpty
-              ? todaySessions.first
-              : null,
-          onUpdate:
-              (sessionId, distance, calories, duration, activityType) async {
-                if (todaySessions.isNotEmpty) {
-                  // Edit existing session
-                  await _performCustomEditTest(
-                    sessionId.isEmpty
-                        ? todaySessions.first['id'] as String
-                        : sessionId,
-                    distance,
-                    calories,
-                    duration,
-                    activityType,
-                    todaySessions.first,
-                  );
-                } else {
-                  // Create new session with custom values
-                  await _createCustomTestSession(
-                    distance,
-                    calories,
-                    duration,
-                    activityType,
-                  );
-                }
-              },
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _status = '❌ Failed to prepare edit test: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _createCustomTestSession(
-    double distance,
-    double calories,
-    int duration,
-    String activityType,
-  ) async {
-    setState(() {
-      _isLoading = true;
-      _status = 'Creating custom test session...';
-    });
-
-    try {
-      final now = DateTime.now();
-      await _firebaseService.saveTrackingSession(
-        distance: distance,
-        calories: calories,
-        duration: duration,
-        activityType: activityType,
-        startTime: now.subtract(Duration(minutes: duration)),
-        endTime: now,
-        route: [
-          {'latitude': 10.762622, 'longitude': 106.660172},
-          {'latitude': 10.763622, 'longitude': 106.661172},
-        ],
-      );
-
-      setState(() {
-        _status =
-            '✅ CUSTOM SESSION CREATED!\n\n'
-            '🆕 New session with your custom values:\n'
-            '• Distance: ${distance.toStringAsFixed(2)} km\n'
-            '• Calories: ${calories.toStringAsFixed(0)} cal\n'
-            '• Duration: $duration min\n'
-            '• Activity: $activityType\n\n'
-            '🔥 Check Firebase Console to verify!';
-      });
-    } catch (e) {
-      setState(() {
-        _status = '❌ Custom session creation failed: $e';
-      });
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _performCustomEditTest(
-    String sessionId,
-    double newDistance,
-    double newCalories,
-    int newDuration,
-    String newActivityType,
-    Map<String, dynamic> originalSession,
-  ) async {
-    setState(() {
-      _isLoading = true;
-      _status = 'Performing custom edit test...';
-    });
-
-    try {
-      // Get original values for comparison
-      final originalDistance = (originalSession['distance'] as num).toDouble();
-      final originalCalories = (originalSession['calories'] as num).toDouble();
-      final originalDuration = originalSession['duration'] as int;
-      final originalActivityType = originalSession['activityType'] as String;
-
+      final sessionToEdit = todaySessions.first;
+      final sessionId = sessionToEdit['id'] as String;
+      
+      final originalDistance = (sessionToEdit['distance'] as num).toDouble();
+      final newDistance = originalDistance + 0.5;
+      
       await _firebaseService.updateSession(
         sessionId: sessionId,
         distance: newDistance,
-        calories: newCalories,
-        duration: newDuration,
-        activityType: newActivityType,
-        startTime: DateTime.parse(originalSession['startTime'] as String),
-        endTime: DateTime.parse(originalSession['endTime'] as String),
-        route: originalSession['route'] as List<dynamic>,
+        calories: (sessionToEdit['calories'] as num).toDouble() + 50,
+        duration: (sessionToEdit['duration'] as int) + 5,
+        activityType: sessionToEdit['activityType'] as String,
+        startTime: DateTime.parse(sessionToEdit['startTime'] as String),
+        endTime: DateTime.parse(sessionToEdit['endTime'] as String),
+        route: sessionToEdit['route'] as List<dynamic>,
       );
 
       setState(() {
-        _status =
-            '✅ CUSTOM EDIT TEST SUCCESSFUL!\n\n'
-            'Session updated with your custom values:\n\n'
-            '📊 CHANGES MADE:\n'
+        _status = '✅ EDIT TEST SUCCESSFUL!\n\n'
+            'Session updated:\n'
             '• Distance: ${originalDistance.toStringAsFixed(2)} → ${newDistance.toStringAsFixed(2)} km\n'
-            '• Calories: ${originalCalories.toStringAsFixed(0)} → ${newCalories.toStringAsFixed(0)} cal\n'
-            '• Duration: $originalDuration → $newDuration min\n'
-            '• Activity: $originalActivityType → $newActivityType\n\n'
-            '🔥 Check Firebase Console to verify changes!';
+            '• Added 50 calories and 5 minutes\n\n'
+            'Check Firebase Console to verify changes.';
       });
     } catch (e) {
       setState(() {
-        _status = '❌ Custom edit test failed: $e';
+        _status = '❌ Edit test failed: $e';
       });
     } finally {
       setState(() => _isLoading = false);
@@ -662,14 +476,11 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     });
 
     try {
-      final todaySessions = await _firebaseService.getDailySessions(
-        DateTime.now(),
-      );
+      final todaySessions = await _firebaseService.getDailySessions(DateTime.now());
 
       if (todaySessions.isEmpty) {
         setState(() {
-          _status =
-              '⚠️ No sessions found. Create some test sessions first using "Test Save Session".';
+          _status = '⚠️ No sessions found. Create some test sessions first using "Test Save Session".';
         });
         return;
       }
@@ -678,12 +489,11 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
       final sessionId = sessionToDelete['id'] as String;
       final distance = sessionToDelete['distance'];
       final calories = sessionToDelete['calories'];
-
+      
       await _firebaseService.deleteSession(sessionId);
 
       setState(() {
-        _status =
-            '✅ DELETE TEST SUCCESSFUL!\n\n'
+        _status = '✅ DELETE TEST SUCCESSFUL!\n\n'
             'Deleted session:\n'
             '• Distance: $distance km\n'
             '• Calories: $calories\n'
@@ -707,8 +517,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     final savedSessions = _hybridService.todaySessions;
 
     setState(() {
-      _status =
-          '📊 CURRENT APP DATA\n\n'
+      _status = '📊 CURRENT APP DATA\n\n'
           '📏 Distance: ${savedDistance.toStringAsFixed(2)} km\n'
           '🔥 Calories: ${savedCalories.round()}\n'
           '👣 Steps: $savedSteps\n'
@@ -721,8 +530,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     final status = _hybridService.getAutoSaveStatus();
 
     setState(() {
-      _status =
-          '⏰ AUTO-SAVE STATUS\n\n'
+      _status = '⏰ AUTO-SAVE STATUS\n\n'
           '🔐 Enabled: ${status['isEnabled']}\n'
           '🌙 Next Reset: ${status['nextDailyReset']}\n'
           '🔄 Next Sync: ${status['nextPeriodicSync']}\n'
@@ -740,8 +548,7 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     try {
       await _hybridService.manualBackupToFirebase();
       setState(() {
-        _status =
-            '✅ Manual backup completed!\nAll data safely stored in Firebase.';
+        _status = '✅ Manual backup completed!\nAll data safely stored in Firebase.';
       });
     } catch (e) {
       setState(() {
