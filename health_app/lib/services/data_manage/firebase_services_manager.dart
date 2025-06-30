@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'firebase_analytics_service.dart';
-import 'firebase_crashlytics_service.dart';
-import 'firebase_performance_service.dart';
+import '../data_monitoring/firebase_analytics_service.dart';
+import '../data_monitoring/firebase_crashlytics_service.dart';
+import '../data_monitoring/firebase_performance_service.dart';
 
 /// Main Firebase Services Manager
 /// Coordinates all Firebase services initialization and provides unified access

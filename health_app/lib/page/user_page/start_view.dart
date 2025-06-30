@@ -1,4 +1,4 @@
-import '../common/color.dart';
+import '../../common/color.dart';
 import 'package:flutter/material.dart';
 import 'onboarding.dart';
 

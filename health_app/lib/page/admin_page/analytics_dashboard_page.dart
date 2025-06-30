@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/analytics_dashboard_service.dart';
-import '../services/analytics_test_data_service.dart';
-import '../models/analytics_models.dart';
-import '../utils/firebase_utils.dart';
+import '../../services/data_monitoring/analytics_dashboard_service.dart';
+import '../../services/data_monitoring/analytics_test_data_service.dart';
+import '../../models/analytics_models.dart';
+import '../../utils/firebase_utils.dart';
 
 class AnalyticsDashboardPage extends StatefulWidget {
   const AnalyticsDashboardPage({super.key});

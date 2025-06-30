@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/hybrid_data_service.dart';
+import '../services/data_manage/hybrid_data_service.dart';
 
 class EditSessionDialog extends StatefulWidget {
   final TrackingSession session;

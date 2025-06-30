@@ -1,7 +1,7 @@
-import '../services/firebase_services_manager.dart';
-import '../services/firebase_analytics_service.dart';
-import '../services/firebase_crashlytics_service.dart';
-import '../services/firebase_performance_service.dart';
+import '../services/data_manage/firebase_services_manager.dart';
+import '../services/data_monitoring/firebase_analytics_service.dart';
+import '../services/data_monitoring/firebase_crashlytics_service.dart';
+import '../services/data_monitoring/firebase_performance_service.dart';
 
 /// Utility class for easy access to Firebase services
 /// Provides convenient methods for common Firebase operations

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/analytics_models.dart';
+import '../../models/analytics_models.dart';
 
 class AnalyticsDashboardService {
   static final AnalyticsDashboardService _instance =

@@ -1,12 +1,12 @@
 // ignore_for_file: file_names
 
 import "package:flutter/material.dart";
-import "../services/auth_controller.dart";
-import "../services/google_auth_service.dart";
+import "../../services/authen_service/auth_controller.dart";
+import "../../services/authen_service/google_auth_service.dart";
 // import "./services/firebase_debug_service.dart"; // Uncomment for testing
-import "../widgets/login_form.dart";
-import "../widgets/signup_form.dart";
-import "../utils/snackbar_utils.dart";
+import "../../widgets/login_form.dart";
+import "../../widgets/signup_form.dart";
+import "../../utils/snackbar_utils.dart";
 import "main_screen.dart";
 // 🧪 DEBUG IMPORT - Remove before production
 // import "../debug/login_debug_widget.dart";

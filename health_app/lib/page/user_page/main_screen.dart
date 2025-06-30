@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
-import "../widgets/health_dashboard.dart";
+import "../../widgets/health_dashboard.dart";
 import "map_page.dart";
 import "my_profile_page.dart";
 import "help_page.dart";

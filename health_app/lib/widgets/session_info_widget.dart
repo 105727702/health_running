@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_controller.dart';
+import '../services/authen_service/auth_controller.dart';
 
 class SessionInfoWidget extends StatefulWidget {
   final bool showSessionDuration;

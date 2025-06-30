@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/tracking_state.dart';
-import '../models/user_goals.dart';
+import '../../models/tracking_state.dart';
+import '../../models/user_goals.dart';
 import 'firebase_data_service.dart';
 
 class HybridDataService {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'page/start_view.dart';
+import 'page/user_page/start_view.dart';
 import 'utils/firebase_utils.dart';
-import 'services/firebase_analytics_service.dart';
+import 'services/data_monitoring/firebase_analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

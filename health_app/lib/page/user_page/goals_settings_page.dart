@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/tracking_data_service.dart';
-import '../models/user_goals.dart';
-import '../utils/snackbar_utils.dart';
+import '../../services/data_manage/tracking_data_service.dart';
+import '../../models/user_goals.dart';
+import '../../utils/snackbar_utils.dart';
 
 class GoalsSettingsPage extends StatefulWidget {
   const GoalsSettingsPage({super.key});

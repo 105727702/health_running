@@ -2,7 +2,7 @@
 // This file demonstrates how to integrate admin role checks into your widgets
 
 import 'package:flutter/material.dart';
-import '../services/role_service.dart';
+import '../services/authen_service/role_service.dart';
 
 class AdminProtectedWidget extends StatefulWidget {
   final Widget child;

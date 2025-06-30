@@ -4,13 +4,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
-import '../models/location_service.dart';
-import '../utils/distance_calculator.dart' as utils;
-import '../utils/calorie_calculator.dart';
-import '../models/tracking_state.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/session_info_widget.dart';
-import '../services/tracking_data_service.dart';
+import '../../models/location_service.dart';
+import '../../utils/distance_calculator.dart' as utils;
+import '../../utils/calorie_calculator.dart';
+import '../../models/tracking_state.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/session_info_widget.dart';
+import '../../services/data_manage/tracking_data_service.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key, required this.title});

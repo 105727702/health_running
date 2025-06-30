@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/logout_button.dart';
 import '../widgets/session_info_widget.dart';
-import '../page/Login_Screen.dart';
+import '../page/user_page/Login_Screen.dart';
 
 class SettingsDialogSimple extends StatelessWidget {
   const SettingsDialogSimple({super.key});

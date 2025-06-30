@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/firebase_auth_service.dart';
+import '../services/authen_service/firebase_auth_service.dart';
 
 class SnackBarUtils {
   // Show authentication result snackbar

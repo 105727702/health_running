@@ -10,8 +10,8 @@
 
 import 'package:flutter/material.dart';
 import '../utils/firebase_utils.dart';
-import '../services/firebase_analytics_service.dart';
-import '../services/firebase_crashlytics_service.dart';
+import '../services/data_monitoring/firebase_analytics_service.dart';
+import '../services/data_monitoring/firebase_crashlytics_service.dart';
 
 class FirebaseServicesExamples {
   // ========================================================================

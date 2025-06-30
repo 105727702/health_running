@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/tracking_data_service.dart';
-import '../utils/snackbar_utils.dart';
+import '../../services/data_manage/tracking_data_service.dart';
+import '../../utils/snackbar_utils.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});

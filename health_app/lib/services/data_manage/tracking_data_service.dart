@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/tracking_state.dart';
-import '../models/user_goals.dart';
+import '../../models/tracking_state.dart';
+import '../../models/user_goals.dart';
 
 class TrackingDataService {
   static final TrackingDataService _instance = TrackingDataService._internal();

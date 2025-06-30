@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/auth_controller.dart';
-import '../services/google_auth_service.dart';
-import '../services/firebase_services_manager.dart';
-import '../services/firebase_auth_service.dart';
+import '../services/authen_service/auth_controller.dart';
+import '../services/authen_service/google_auth_service.dart';
+import '../services/data_manage/firebase_services_manager.dart';
+import '../services/authen_service/firebase_auth_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../utils/firebase_utils.dart';
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/hybrid_data_service.dart';
-import '../page/history_page.dart';
-import '../page/goals_settings_page.dart';
-import '../page/data_management_page.dart';
+import '../services/data_manage/hybrid_data_service.dart';
+import '../page/user_page/history_page.dart';
+import '../page/user_page/goals_settings_page.dart';
+import '../page/admin_page/data_management_page.dart';
 import '../widgets/achievement_dialog.dart';
 
 class HybridHealthDashboard extends StatefulWidget {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import '../models/tracking_state.dart';
-import '../utils/firebase_utils.dart';
-import '../services/firebase_analytics_service.dart';
-import '../services/firebase_crashlytics_service.dart';
-import '../services/firebase_services_manager.dart';
+import '../../models/tracking_state.dart';
+import '../../utils/firebase_utils.dart';
+import '../../services/data_monitoring/firebase_analytics_service.dart';
+import '../../services/data_monitoring/firebase_crashlytics_service.dart';
+import '../../services/data_manage/firebase_services_manager.dart';
 
 class FirebaseTestPage extends StatefulWidget {
   const FirebaseTestPage({super.key});

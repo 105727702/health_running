@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
-import 'data_storage_comparison_page.dart';
-import '../services/role_service.dart';
+import '../admin_page/data_storage_comparison_page.dart';
+import '../../services/authen_service/role_service.dart';
 
 class HelpPage extends StatefulWidget {
   const HelpPage({super.key});

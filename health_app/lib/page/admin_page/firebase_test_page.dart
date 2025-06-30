@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/firebase_data_service.dart';
-import '../services/hybrid_data_service.dart';
-import '../services/role_service.dart';
-import '../widgets/custom_edit_test_dialog.dart';
+import '../../services/data_manage/firebase_data_service.dart';
+import '../../services/data_manage/hybrid_data_service.dart';
+import '../../services/authen_service/role_service.dart';
+import '../../widgets/custom_edit_test_dialog.dart';
 
 class FirebaseTestPage extends StatefulWidget {
   const FirebaseTestPage({super.key});
