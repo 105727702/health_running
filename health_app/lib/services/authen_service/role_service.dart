@@ -12,25 +12,25 @@ class RoleService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Admin email list - có thể config trong Firebase Remote Config sau này
+  // Admin email list - can be configured in Firebase Remote Config later
   static const List<String> _adminEmails = [
     'admin@healthapp.com',
     'huyhoang17012006@gmail.com',
-    // Thêm email admin khác tại đây
+    // Add other admin emails here
   ];
 
-  // Lấy role hiện tại của user
+  // Get current user role
   Future<UserRole> getCurrentUserRole() async {
     final user = _auth.currentUser;
     if (user == null) return UserRole.user;
 
-    // Kiểm tra trong admin email list trước
+    // Check admin email list first
     if (_adminEmails.contains(user.email?.toLowerCase())) {
       await _setUserRole(user.uid, UserRole.admin); // Sync to Firestore
       return UserRole.admin;
     }
 
-    // Kiểm tra trong Firestore
+    // Check in Firestore
     try {
       final doc = await _firestore.collection('user_roles').doc(user.uid).get();
 
@@ -47,25 +47,25 @@ class RoleService {
     return UserRole.user;
   }
 
-  // Kiểm tra user có phải admin không
+  // Check if current user is admin
   Future<bool> isCurrentUserAdmin() async {
     final role = await getCurrentUserRole();
     return role == UserRole.admin;
   }
 
-  // Stream để theo dõi thay đổi role real-time
+  // Stream to monitor role changes in real-time
   Stream<UserRole> getCurrentUserRoleStream() {
     final user = _auth.currentUser;
     if (user == null) {
       return Stream.value(UserRole.user);
     }
 
-    // Kiểm tra admin email list trước
+    // Check admin email list first
     if (_adminEmails.contains(user.email?.toLowerCase())) {
       return Stream.value(UserRole.admin);
     }
 
-    // Stream từ Firestore
+    // Stream from Firestore
     return _firestore.collection('user_roles').doc(user.uid).snapshots().map((
       doc,
     ) {
@@ -79,7 +79,7 @@ class RoleService {
     });
   }
 
-  // Set role cho user (chỉ admin mới có thể gọi)
+  // Set role for user (only admin can call this)
   Future<void> _setUserRole(String userId, UserRole role) async {
     try {
       await _firestore.collection('user_roles').doc(userId).set({
@@ -92,7 +92,7 @@ class RoleService {
     }
   }
 
-  // Promote user to admin (chỉ super admin mới có thể gọi)
+  // Promote user to admin (only super admin can call this)
   Future<bool> promoteUserToAdmin(String userEmail) async {
     final currentRole = await getCurrentUserRole();
     if (currentRole != UserRole.admin) {
@@ -100,7 +100,7 @@ class RoleService {
     }
 
     try {
-      // Tìm user bằng email
+      // Find user by email
       final querySnapshot = await _firestore
           .collection('users')
           .where('email', isEqualTo: userEmail.toLowerCase())
@@ -108,7 +108,7 @@ class RoleService {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        return false; // User không tồn tại
+        return false; // User does not exist
       }
 
       final userDoc = querySnapshot.docs.first;
@@ -129,7 +129,7 @@ class RoleService {
       throw Exception('Only admins can demote users');
     }
 
-    // Không thể demote admin email trong hardcoded list
+    // Cannot demote admin email in hardcoded list
     if (_adminEmails.contains(userEmail.toLowerCase())) {
       throw Exception('Cannot demote hardcoded admin');
     }
@@ -156,7 +156,7 @@ class RoleService {
     }
   }
 
-  // Lấy danh sách tất cả admin
+  // Get list of all admins
   Future<List<Map<String, dynamic>>> getAllAdmins() async {
     final currentRole = await getCurrentUserRole();
     if (currentRole != UserRole.admin) {
@@ -171,12 +171,12 @@ class RoleService {
 
       final admins = <Map<String, dynamic>>[];
 
-      // Thêm hardcoded admins
+      // Add hardcoded admins
       for (final email in _adminEmails) {
         admins.add({'email': email, 'type': 'hardcoded', 'canDemote': false});
       }
 
-      // Thêm admins từ Firestore
+      // Add admins from Firestore
       for (final doc in querySnapshot.docs) {
         final userId = doc.id;
         final userDoc = await _firestore.collection('users').doc(userId).get();
