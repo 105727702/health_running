@@ -6,7 +6,12 @@ import '../services/firebase_performance_service.dart';
 /// Utility class for easy access to Firebase services
 /// Provides convenient methods for common Firebase operations
 class FirebaseUtils {
-  /// Track page/screen navigation
+  /// Track page/screen view
+  static Future<void> trackScreenView(String screenName) async {
+    await FirebaseServicesManager.logScreenView(screenName: screenName);
+  }
+
+  /// Track page/screen navigation (alias for trackScreenView)
   static Future<void> trackNavigation(String screenName) async {
     await FirebaseServicesManager.logScreenView(screenName: screenName);
   }

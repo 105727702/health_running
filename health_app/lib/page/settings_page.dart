@@ -4,6 +4,7 @@ import 'Login_Screen.dart';
 import 'goals_settings_page.dart';
 import 'data_management_page.dart';
 import 'firebase_test_demo_page.dart';
+import 'analytics_dashboard_page.dart';
 import '../services/role_service.dart';
 import '../utils/firebase_utils.dart';
 
@@ -345,15 +346,17 @@ class SettingsPage extends StatelessWidget {
                                     icon: Icons.analytics,
                                     title: 'Analytics Dashboard',
                                     subtitle: 'View app usage analytics',
-                                    onTap: () {
-                                      ScaffoldMessenger.of(
+                                    onTap: () async {
+                                      await FirebaseUtils.trackButtonTap(
+                                        'analytics_dashboard_admin',
+                                        screenName: 'settings',
+                                      );
+                                      // ignore: use_build_context_synchronously
+                                      Navigator.push(
                                         context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Analytics Dashboard - Coming soon!',
-                                          ),
-                                          backgroundColor: Colors.deepOrange,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const AnalyticsDashboardPage(),
                                         ),
                                       );
                                     },

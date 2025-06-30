@@ -204,6 +204,7 @@ class RoleService {
   }
 
   // Log admin action
+  // ignore: unused_element
   Future<void> _logAdminAction(
     String action,
     Map<String, dynamic> details,
