@@ -4,27 +4,29 @@ import 'firebase_options.dart';
 import 'page/user_page/start_view.dart';
 import 'utils/firebase_utils.dart';
 import 'services/data_monitoring/firebase_analytics_service.dart';
+import 'services/data_manage/auto_backup_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // ignore: avoid_print
     print('🔥 Initializing Firebase...');
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    // ignore: avoid_print
+
     print('✅ Firebase initialized successfully');
 
-    // Initialize Firebase services (Analytics, Crashlytics, Performance)
-    // ignore: avoid_print
     print('🚀 Initializing Firebase services...');
     await FirebaseUtils.initialize();
-    // ignore: avoid_print
+
     print('✅ Firebase services initialized successfully');
+
+    // Initialize Auto Backup Service
+    print('🔄 Initializing Auto Backup Service...');
+    await AutoBackupService().initialize();
+    print('✅ Auto Backup Service initialized successfully');
   } catch (e) {
-    // ignore: avoid_print
     print('❌ Firebase initialization failed: $e');
   }
 

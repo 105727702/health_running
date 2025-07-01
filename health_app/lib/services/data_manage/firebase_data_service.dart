@@ -339,6 +339,131 @@ class FirebaseDataService {
     }
   }
 
+  // Save user backup data to Firestore
+  Future<void> saveUserBackup(Map<String, dynamic> backupData) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Save to user's backup collection
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('backups')
+          .doc('latest')
+          .set({
+            ...backupData,
+            'userId': user.uid,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+      // Also save to backup history with timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('backup_history')
+          .doc(timestamp.toString())
+          .set({
+            ...backupData,
+            'userId': user.uid,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+      print('✅ Backup saved to Firebase successfully');
+    } catch (e) {
+      print('❌ Error saving backup to Firebase: $e');
+      throw Exception('Failed to save backup: $e');
+    }
+  }
+
+  // Get user backup data from Firestore
+  Future<Map<String, dynamic>?> getUserBackup() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('backups')
+          .doc('latest')
+          .get();
+
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ Error getting backup from Firebase: $e');
+      throw Exception('Failed to get backup: $e');
+    }
+  }
+
+  // Get backup history
+  Future<List<Map<String, dynamic>>> getBackupHistory({int limit = 10}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('backup_history')
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+          .toList();
+    } catch (e) {
+      print('❌ Error getting backup history: $e');
+      throw Exception('Failed to get backup history: $e');
+    }
+  }
+
+  // Delete old backups (keep only recent ones)
+  Future<void> cleanupOldBackups({int keepCount = 5}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Get all backup history documents
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('backup_history')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      // Delete documents beyond keepCount
+      if (querySnapshot.docs.length > keepCount) {
+        final docsToDelete = querySnapshot.docs.skip(keepCount);
+
+        final batch = _firestore.batch();
+        for (final doc in docsToDelete) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+        print('🧹 Cleaned up ${docsToDelete.length} old backup(s)');
+      }
+    } catch (e) {
+      print('❌ Error cleaning up old backups: $e');
+      // Don't throw here as this is not critical
+    }
+  }
+
   // Helper method to format date
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

@@ -72,6 +72,9 @@ class TrackingDataService {
       _updateDailyTotals(newState);
     }
 
+    // Save current tracking state for background persistence
+    _saveCurrentTrackingState();
+
     // Force UI update by emitting current state
     _trackingStateController.add(_currentState);
   }
@@ -95,6 +98,9 @@ class TrackingDataService {
       // Save data to storage
       _saveData();
     }
+
+    // Clear saved tracking state since session is complete
+    _clearSavedTrackingState();
   }
 
   // Update daily totals
@@ -152,6 +158,9 @@ class TrackingDataService {
   Future<void> _loadSavedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Load current tracking state first
+      await _loadCurrentTrackingState();
 
       // Load historical data
       final String? historicalJson = prefs.getString('historical_data');
@@ -510,6 +519,81 @@ class TrackingDataService {
     } catch (e) {
       print('Error performing complete reset: $e');
       throw Exception('Failed to perform complete reset');
+    }
+  }
+
+  // Save current tracking state to SharedPreferences for background persistence
+  Future<void> _saveCurrentTrackingState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final trackingStateJson = jsonEncode(_currentState.toJson());
+      await prefs.setString('current_tracking_state', trackingStateJson);
+
+      // Also save a flag to indicate if we're actively tracking
+      await prefs.setBool('is_actively_tracking', _currentState.isTracking);
+
+      if (_currentState.isTracking) {
+        print('✅ Background tracking state saved');
+      }
+    } catch (e) {
+      print('❌ Error saving tracking state: $e');
+    }
+  }
+
+  // Load current tracking state from SharedPreferences
+  Future<void> _loadCurrentTrackingState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? trackingStateJson = prefs.getString(
+        'current_tracking_state',
+      );
+      final bool wasTracking = prefs.getBool('is_actively_tracking') ?? false;
+
+      if (trackingStateJson != null && wasTracking) {
+        final Map<String, dynamic> data = jsonDecode(trackingStateJson);
+        _currentState = TrackingState.fromJson(data);
+
+        // If we were tracking before app was closed, notify that we're resuming
+        if (_currentState.isTracking) {
+          print('🔄 Resuming background tracking session...');
+          print(
+            '   - Distance: ${_currentState.totalDistance.toStringAsFixed(2)} km',
+          );
+          print(
+            '   - Calories: ${_currentState.totalCalories.toStringAsFixed(0)} cal',
+          );
+          print('   - Route points: ${_currentState.route.length}');
+
+          // Emit the state to update UI
+          _trackingStateController.add(_currentState);
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading tracking state: $e');
+      _currentState = TrackingState(); // Reset to default if error
+    }
+  }
+
+  // Clear saved tracking state (call when tracking stops normally)
+  Future<void> _clearSavedTrackingState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('current_tracking_state');
+      await prefs.setBool('is_actively_tracking', false);
+      print('🧹 Tracking state cleared');
+    } catch (e) {
+      print('❌ Error clearing tracking state: $e');
+    }
+  }
+
+  // Check if we were tracking before app was closed
+  Future<bool> wasTrackingBeforeClosure() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('is_actively_tracking') ?? false;
+    } catch (e) {
+      print('❌ Error checking previous tracking state: $e');
+      return false;
     }
   }
 

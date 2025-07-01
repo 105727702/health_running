@@ -35,6 +35,49 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _checkAndResumeTracking();
+  }
+
+  // Check if we were tracking before app was closed and resume if needed
+  Future<void> _checkAndResumeTracking() async {
+    final wasTracking = await _trackingDataService.wasTrackingBeforeClosure();
+    if (wasTracking) {
+      // Wait for service to be initialized
+      await _trackingDataService.initialized;
+
+      // Get the resumed tracking state
+      final resumedState = _trackingDataService.currentState;
+      if (resumedState.isTracking) {
+        setState(() {
+          _trackingState = resumedState;
+        });
+
+        // Restart location tracking
+        _startLocationTracking();
+
+        // Show notification that tracking was resumed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.play_circle_filled, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tracking resumed! Distance: ${resumedState.totalDistance.toStringAsFixed(2)} km',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override

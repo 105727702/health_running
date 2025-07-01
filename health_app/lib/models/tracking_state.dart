@@ -150,6 +150,62 @@ class TrackingState {
     );
   }
 
+  /// Convert to JSON for persistence
+  Map<String, dynamic> toJson() {
+    return {
+      'route': route
+          .map((point) => {'lat': point.latitude, 'lng': point.longitude})
+          .toList(),
+      'totalDistance': totalDistance,
+      'totalCalories': totalCalories,
+      'isTracking': isTracking,
+      'lastPosition': lastPosition != null
+          ? {'lat': lastPosition!.latitude, 'lng': lastPosition!.longitude}
+          : null,
+      'currentPosition': currentPosition != null
+          ? {
+              'lat': currentPosition!.latitude,
+              'lng': currentPosition!.longitude,
+            }
+          : null,
+      'userWeight': userWeight,
+      'activityType': activityType,
+      'startTime': startTime?.toIso8601String(),
+      'endTime': endTime?.toIso8601String(),
+      'sessionId': sessionId,
+    };
+  }
+
+  /// Create from JSON for persistence
+  factory TrackingState.fromJson(Map<String, dynamic> json) {
+    return TrackingState(
+      route:
+          (json['route'] as List<dynamic>?)
+              ?.map((point) => LatLng(point['lat'], point['lng']))
+              .toList() ??
+          [],
+      totalDistance: json['totalDistance']?.toDouble() ?? 0.0,
+      totalCalories: json['totalCalories']?.toDouble() ?? 0.0,
+      isTracking: json['isTracking'] ?? false,
+      lastPosition: json['lastPosition'] != null
+          ? LatLng(json['lastPosition']['lat'], json['lastPosition']['lng'])
+          : null,
+      currentPosition: json['currentPosition'] != null
+          ? LatLng(
+              json['currentPosition']['lat'],
+              json['currentPosition']['lng'],
+            )
+          : null,
+      userWeight: json['userWeight']?.toDouble() ?? 70.0,
+      activityType: json['activityType'] ?? 'walking',
+      startTime: json['startTime'] != null
+          ? DateTime.parse(json['startTime'])
+          : null,
+      endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
+      sessionId: json['sessionId'] ?? 0,
+    );
+  }
+
   /// Calculate distance between two points
   double _calculateDistance(LatLng point1, LatLng point2) {
     const double earthRadius = 6371000; // Earth radius in meters

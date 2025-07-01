@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/data_manage/firebase_data_service.dart';
 import '../../services/data_manage/hybrid_data_service.dart';
 import '../../services/authen_service/role_service.dart';
+import '../../services/data_manage/auto_backup_service.dart';
 import '../../widgets/custom_edit_test_dialog.dart';
 
 class FirebaseTestPage extends StatefulWidget {
@@ -16,14 +17,17 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
   final FirebaseDataService _firebaseService = FirebaseDataService();
   final HybridDataService _hybridService = HybridDataService();
   final RoleService _roleService = RoleService();
+  final AutoBackupService _autoBackupService = AutoBackupService();
   bool _isLoading = false;
   String _status = 'Ready to test Firebase';
   bool _isAdmin = false;
+  BackupStatus? _backupStatus;
 
   @override
   void initState() {
     super.initState();
     _checkUserRole();
+    _loadBackupStatus();
   }
 
   Future<void> _checkUserRole() async {
@@ -31,6 +35,17 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     setState(() {
       _isAdmin = isAdmin;
     });
+  }
+
+  Future<void> _loadBackupStatus() async {
+    try {
+      final status = await _autoBackupService.getBackupStatus();
+      setState(() {
+        _backupStatus = status;
+      });
+    } catch (e) {
+      print('Error loading backup status: $e');
+    }
   }
 
   @override
@@ -360,6 +375,200 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Auto Backup Test Card
+              Card(
+                elevation: 4,
+                shadowColor: Colors.teal.withOpacity(0.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.teal.withOpacity(0.05),
+                        Colors.teal.withOpacity(0.02),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.backup, color: Colors.teal, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Auto Backup Test (24h)',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(
+                                    color: Colors.teal,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Backup Status Info
+                        if (_backupStatus != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.teal.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Backup Status',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildStatusRow(
+                                  icon: _backupStatus!.isEnabled
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  iconColor: _backupStatus!.isEnabled
+                                      ? Colors.green
+                                      : Colors.red,
+                                  label: 'Auto Backup',
+                                  value: _backupStatus!.isEnabled
+                                      ? 'Enabled'
+                                      : 'Disabled',
+                                ),
+                                if (_backupStatus!.lastBackupTime != null) ...[
+                                  const SizedBox(height: 4),
+                                  _buildStatusRow(
+                                    icon: Icons.history,
+                                    iconColor: Colors.blue,
+                                    label: 'Last Backup',
+                                    value: _formatDateTime(
+                                      _backupStatus!.lastBackupTime!,
+                                    ),
+                                  ),
+                                ],
+                                if (_backupStatus!.nextBackupTime != null) ...[
+                                  const SizedBox(height: 4),
+                                  _buildStatusRow(
+                                    icon: Icons.schedule,
+                                    iconColor: Colors.orange,
+                                    label: 'Next Backup',
+                                    value: _formatDateTime(
+                                      _backupStatus!.nextBackupTime!,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                _buildStatusRow(
+                                  icon: Icons.timer,
+                                  iconColor: _backupStatus!.isTimerActive
+                                      ? Colors.green
+                                      : Colors.grey,
+                                  label: 'Timer Status',
+                                  value: _backupStatus!.isTimerActive
+                                      ? 'Active'
+                                      : 'Inactive',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Test Buttons
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildTestButton(
+                              icon: Icons.play_circle_filled,
+                              label: 'Test Manual Backup',
+                              color: Colors.teal,
+                              onPressed: _testManualBackup,
+                            ),
+                            _buildTestButton(
+                              icon: Icons.fast_forward,
+                              label: 'Simulate 24h Backup',
+                              color: Colors.orange,
+                              onPressed: _testSimulate24hBackup,
+                            ),
+                            _buildTestButton(
+                              icon: _backupStatus?.isEnabled == true
+                                  ? Icons.pause_circle_filled
+                                  : Icons.play_circle_outline,
+                              label: _backupStatus?.isEnabled == true
+                                  ? 'Disable Auto'
+                                  : 'Enable Auto',
+                              color: _backupStatus?.isEnabled == true
+                                  ? Colors.red
+                                  : Colors.green,
+                              onPressed: _toggleAutoBackup,
+                            ),
+                            _buildTestButton(
+                              icon: Icons.refresh,
+                              label: 'Refresh Status',
+                              color: Colors.blue,
+                              onPressed: _loadBackupStatus,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Test Description
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Test Description:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '• Manual Backup: Thực hiện backup ngay lập tức\n'
+                                '• Simulate 24h: Tạo dữ liệu test và thực hiện backup\n'
+                                '• Auto Backup: Tự động backup lúc 2:00 AM mỗi ngày\n'
+                                '• Dữ liệu được lưu lên Firebase Firestore',
+                                style: TextStyle(fontSize: 12, height: 1.4),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -750,6 +959,186 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  // Test manual backup
+  Future<void> _testManualBackup() async {
+    setState(() {
+      _isLoading = true;
+      _status = 'Testing manual backup...';
+    });
+
+    try {
+      final result = await _autoBackupService.performManualBackup();
+
+      setState(() {
+        _status = result.success
+            ? 'Manual backup success! ${result.dataCount} items backed up'
+            : 'Manual backup failed: ${result.message}';
+      });
+
+      // Refresh backup status
+      await _loadBackupStatus();
+
+      // Show snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.success
+                  ? 'Backup completed successfully!'
+                  : 'Backup failed',
+            ),
+            backgroundColor: result.success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'Manual backup error: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Test simulate 24h backup
+  Future<void> _testSimulate24hBackup() async {
+    setState(() {
+      _isLoading = true;
+      _status = 'Simulating 24h backup with test data...';
+    });
+
+    try {
+      final result = await _autoBackupService.simulateBackupAfter24Hours();
+
+      setState(() {
+        _status = result.success
+            ? 'Simulation success! Test data backed up: ${result.dataCount} items'
+            : 'Simulation failed: ${result.message}';
+      });
+
+      // Refresh backup status
+      await _loadBackupStatus();
+
+      // Show detailed dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  result.success ? Icons.check_circle : Icons.error,
+                  color: result.success ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  result.success ? 'Simulation Success' : 'Simulation Failed',
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Message: ${result.message}'),
+                const SizedBox(height: 8),
+                Text('Data Count: ${result.dataCount}'),
+                const SizedBox(height: 8),
+                Text('Timestamp: ${_formatDateTime(result.timestamp)}'),
+                if (result.success) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Test data was created and successfully backed up to Firebase!',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'Simulation error: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Toggle auto backup
+  Future<void> _toggleAutoBackup() async {
+    if (_backupStatus == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _status = _backupStatus!.isEnabled
+          ? 'Disabling auto backup...'
+          : 'Enabling auto backup...';
+    });
+
+    try {
+      await _autoBackupService.setBackupEnabled(!_backupStatus!.isEnabled);
+      await _loadBackupStatus();
+
+      setState(() {
+        _status = _backupStatus!.isEnabled
+            ? 'Auto backup enabled! Next backup scheduled.'
+            : 'Auto backup disabled.';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _backupStatus!.isEnabled
+                  ? 'Auto backup enabled'
+                  : 'Auto backup disabled',
+            ),
+            backgroundColor: _backupStatus!.isEnabled
+                ? Colors.green
+                : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'Error toggling auto backup: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Format DateTime for display
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   // Helper methods
