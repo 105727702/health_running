@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 import '../services/data_manage/tracking_data_service.dart';
 import '../page/user_page/history_page.dart';
 import '../page/user_page/goals_settings_page.dart';
@@ -407,6 +409,9 @@ class _HealthDashboardState extends State<HealthDashboard> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+            // Weekly Chart
+            _buildWeeklyChart(),
           ],
         ),
       ),
@@ -960,5 +965,283 @@ class _HealthDashboardState extends State<HealthDashboard> {
         ),
       ),
     );
+  }
+
+  // Get weekly chart data
+  List<Map<String, dynamic>> _getWeeklyChartData() {
+    final List<Map<String, dynamic>> weeklyData = [];
+    final now = DateTime.now();
+
+    // Find Monday of current week
+    final currentWeekday = now.weekday; // 1 = Monday, 7 = Sunday
+    final monday = now.subtract(Duration(days: currentWeekday - 1));
+
+    // Get data for 7 days starting from Monday
+    for (int i = 0; i < 7; i++) {
+      final date = monday.add(Duration(days: i));
+      final dateKey = _formatDate(date);
+
+      double distance = 0.0;
+      double calories = 0.0;
+
+      if (_isSameDay(date, now)) {
+        // Today's data
+        distance = _trackingService.dailyDistance;
+        calories = _trackingService.dailyCalories;
+      } else {
+        // Historical data
+        final dayData = _trackingService.getDataForDate(date);
+        if (dayData != null) {
+          distance = dayData.totalDistance;
+          calories = dayData.totalCalories;
+        }
+      }
+
+      weeklyData.add({
+        'day': _getShortDayName(date),
+        'date': date,
+        'distance': distance,
+        'calories': calories,
+        'isToday': _isSameDay(date, now),
+      });
+    }
+
+    return weeklyData;
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _getShortDayName(DateTime date) {
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return dayNames[date.weekday -
+        1]; // weekday is 1-based (1=Monday, 7=Sunday)
+  }
+
+  // Build weekly chart widget
+  Widget _buildWeeklyChart() {
+    final weeklyData = _getWeeklyChartData();
+
+    return Container(
+      height: 240,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.deepPurple.shade50, Colors.blue.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.deepPurple.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.bar_chart,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Weekly Progress',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple.shade700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Last 7 days',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: _getMaxYValue(weeklyData),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    // tooltipBgColor: Colors.deepPurple.withOpacity(0.9),
+                    // tooltipRoundedRadius: 8,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final data = weeklyData[group.x.toInt()];
+                      final isDistance = rodIndex == 0;
+                      final value = isDistance
+                          ? data['distance']
+                          : data['calories'] / 10; // Scale calories
+                      final unit = isDistance ? 'km' : 'cal';
+                      final actualValue = isDistance ? value : data['calories'];
+
+                      return BarTooltipItem(
+                        '${data['day']}\n${actualValue.toStringAsFixed(isDistance ? 1 : 0)} $unit',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index >= 0 && index < weeklyData.length) {
+                          final isToday = weeklyData[index]['isToday'] ?? false;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              weeklyData[index]['day'],
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isToday
+                                    ? Colors.deepPurple
+                                    : Colors.grey.shade600,
+                                fontWeight: isToday
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: weeklyData.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final data = entry.value;
+                  final isToday = data['isToday'] ?? false;
+
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: data['distance'].toDouble(),
+                        color: isToday
+                            ? Colors.blue.shade600
+                            : Colors.blue.shade400,
+                        width: 14,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(4),
+                          topRight: Radius.circular(4),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY:
+                            data['calories'].toDouble() /
+                            20, // Scale down for better visualization
+                        color: isToday
+                            ? Colors.orange.shade600
+                            : Colors.orange.shade400,
+                        width: 14,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(4),
+                          topRight: Radius.circular(4),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+                gridData: FlGridData(
+                  show: true,
+                  drawHorizontalLine: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: _getMaxYValue(weeklyData) / 5,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(color: Colors.grey.shade300, strokeWidth: 1);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem(Colors.blue, 'Distance (km)'),
+              const SizedBox(width: 16),
+              _buildLegendItem(Colors.orange, 'Calories (÷20)'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
+  double _getMaxYValue(List<Map<String, dynamic>> data) {
+    double maxDistance = 0;
+    double maxScaledCalories = 0;
+
+    for (final day in data) {
+      maxDistance = math.max(maxDistance, day['distance'].toDouble());
+      maxScaledCalories = math.max(
+        maxScaledCalories,
+        day['calories'].toDouble() / 20,
+      );
+    }
+
+    final maxValue = math.max(maxDistance, maxScaledCalories);
+    return maxValue > 0 ? maxValue * 1.3 : 10; // Add 30% padding or minimum 10
   }
 }
