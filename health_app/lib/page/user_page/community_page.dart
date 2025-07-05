@@ -12,7 +12,7 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final CommunityService _communityService = CommunityService();
   final TextEditingController _searchController = TextEditingController();
 
@@ -26,16 +26,33 @@ class _CommunityPageState extends State<CommunityPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
     _initializeCommunity();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _refreshCommunityData();
+    }
+  }
+
+  Future<void> _refreshCommunityData() async {
+    try {
+      await _communityService.refreshData();
+    } catch (e) {
+      print('Error refreshing community data: $e');
+    }
+  }
+
   Future<void> _initializeCommunity() async {
+    print('Initializing community...');
     setState(() => _isLoading = true);
 
-    await _communityService.initialize();
-
-    // Listen to streams
+    // Setup stream listeners FIRST before loading data
     _communityService.friendsStream.listen((friends) {
+      print('Friends stream updated: ${friends.length} friends');
       if (mounted) {
         setState(() {
           _friends = friends;
@@ -44,6 +61,7 @@ class _CommunityPageState extends State<CommunityPage>
     });
 
     _communityService.friendRequestsStream.listen((requests) {
+      print('Friend requests stream updated: ${requests.length} requests');
       if (mounted) {
         setState(() {
           _friendRequests = requests;
@@ -51,11 +69,22 @@ class _CommunityPageState extends State<CommunityPage>
       }
     });
 
+    // Force emit any existing data immediately
+    _communityService.emitCurrentData();
+
+    // Now initialize the service which will trigger data loading
+    await _communityService.initialize();
+
+    // Debug friendship data
+    await _communityService.debugFriendshipData();
+
     setState(() => _isLoading = false);
+    print('Community initialization completed');
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -127,7 +156,7 @@ class _CommunityPageState extends State<CommunityPage>
 
     return RefreshIndicator(
       onRefresh: () async {
-        _communityService.refreshData();
+        await _communityService.refreshData();
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -976,15 +1005,10 @@ class _CommunityPageState extends State<CommunityPage>
                   ),
                 );
 
-                // Update search results to show pending status
-                setState(() {
-                  final index = _searchResults.indexWhere(
-                    (u) => u['id'] == user['id'],
-                  );
-                  if (index != -1) {
-                    _searchResults[index]['hasPendingRequest'] = true;
-                  }
-                });
+                // Refresh search results to get the latest status from server
+                if (_searchController.text.isNotEmpty) {
+                  _searchUsers(_searchController.text);
+                }
               }
             },
             child: Text('Send'),

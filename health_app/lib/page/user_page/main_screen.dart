@@ -7,6 +7,7 @@ import "help_page.dart";
 import "community_page.dart";
 import "settings_page.dart";
 import "goals_settings_page.dart";
+import "../../services/data_manage/community_service.dart";
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +20,7 @@ class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _animationController;
+  final CommunityService _communityService = CommunityService();
 
   final List<Widget> _pages = [
     const MainContentPage(),
@@ -42,6 +44,16 @@ class _MainScreenState extends State<MainScreen>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Refresh community data when user switches to community tab
+  Future<void> _refreshCommunityData() async {
+    try {
+      print('Refreshing community data from main screen...');
+      await _communityService.refreshData();
+    } catch (e) {
+      print('Error refreshing community data: $e');
+    }
   }
 
   @override
@@ -108,6 +120,11 @@ class _MainScreenState extends State<MainScreen>
                 _currentIndex = index;
               });
               _animationController.forward();
+
+              // Refresh Community data when switching to Community tab
+              if (index == 1) {
+                _refreshCommunityData();
+              }
             }
           },
           backgroundColor: Colors.white,

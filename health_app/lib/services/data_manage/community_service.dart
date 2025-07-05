@@ -39,7 +39,14 @@ class CommunityService {
 
   // Initialize service
   Future<void> initialize() async {
+    // Load local data first to show something immediately
     await _loadLocalData();
+
+    // Emit current local data immediately (even if empty)
+    _friendsController.add(_friends);
+    _friendRequestsController.add(_friendRequests);
+
+    // Then load fresh data from Firestore
     await _loadRealFriendsFromFirestore();
     _updateWeeklyStats();
   }
@@ -48,7 +55,16 @@ class CommunityService {
   Future<void> _loadRealFriendsFromFirestore() async {
     try {
       final currentUser = _auth.currentUser;
-      if (currentUser == null) return;
+      if (currentUser == null) {
+        print('No current user found, cannot load friends');
+        _friends = [];
+        _friendRequests = [];
+        _friendsController.add(_friends);
+        _friendRequestsController.add(_friendRequests);
+        return;
+      }
+
+      print('Loading friends for user: ${currentUser.uid}');
 
       // Load friends from Firestore user_friends collection
       final friendsSnapshot = await _firestore
@@ -92,6 +108,10 @@ class CommunityService {
       // Load real friend requests
       await _loadRealFriendRequests();
 
+      print(
+        'Loaded ${_friends.length} friends and ${_friendRequests.length} friend requests',
+      );
+
       _friendsController.add(_friends);
       _friendRequestsController.add(_friendRequests);
 
@@ -101,6 +121,10 @@ class CommunityService {
       // Fallback to empty list instead of mock data
       _friends = [];
       _friendRequests = [];
+
+      // Still emit empty data to update UI
+      _friendsController.add(_friends);
+      _friendRequestsController.add(_friendRequests);
     }
   }
 
@@ -170,13 +194,18 @@ class CommunityService {
             .get();
 
         for (var doc in emailQuery.docs) {
-          if (doc.id != currentUser.uid && !_isAlreadyFriend(doc.id)) {
+          if (doc.id != currentUser.uid) {
             final data = doc.data();
+            final friendshipStatus = await getFriendshipStatus(doc.id);
+
             results.add({
               'id': doc.id,
               'name': data['displayName'] ?? data['name'] ?? 'Unknown User',
               'email': data['email'] ?? '',
               'photoUrl': data['photoURL'],
+              'friendshipStatus': friendshipStatus,
+              'isAlreadyFriend': friendshipStatus == 'friends',
+              'hasPendingRequest': friendshipStatus == 'pending',
             });
           }
         }
@@ -191,13 +220,18 @@ class CommunityService {
           .get();
 
       for (var doc in nameQuery.docs) {
-        if (doc.id != currentUser.uid && !_isAlreadyFriend(doc.id)) {
+        if (doc.id != currentUser.uid) {
           final data = doc.data();
+          final friendshipStatus = await getFriendshipStatus(doc.id);
+
           final userMap = {
             'id': doc.id,
             'name': data['displayName'] ?? data['name'] ?? 'Unknown User',
             'email': data['email'] ?? '',
             'photoUrl': data['photoURL'],
+            'friendshipStatus': friendshipStatus,
+            'isAlreadyFriend': friendshipStatus == 'friends',
+            'hasPendingRequest': friendshipStatus == 'pending',
           };
 
           // Avoid duplicates
@@ -214,9 +248,29 @@ class CommunityService {
     }
   }
 
-  // Check if user is already a friend
+  // Check if user is already a friend - check both local and Firestore to be sure
   bool _isAlreadyFriend(String userId) {
     return _friends.any((friend) => friend.id == userId);
+  }
+
+  // More thorough check including Firestore verification
+  Future<bool> isAlreadyFriendInFirestore(String userId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return false;
+
+      final friendDoc = await _firestore
+          .collection('user_friends')
+          .doc(currentUser.uid)
+          .collection('friends')
+          .doc(userId)
+          .get();
+
+      return friendDoc.exists;
+    } catch (e) {
+      print('Error checking friendship in Firestore: $e');
+      return false;
+    }
   }
 
   // Save current user profile to Firestore (call this after login/signup)
@@ -448,6 +502,11 @@ class CommunityService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // Refresh data to ensure UI shows correct status
+      await _loadRealFriendRequests();
+      _friendRequestsController.add(_friendRequests);
+
+      print('✅ Friend request sent to $toUserName ($toUserId)');
       return true;
     } catch (e) {
       print('Error sending friend request: $e');
@@ -537,14 +596,59 @@ class CommunityService {
   // Remove friend
   Future<bool> removeFriend(String friendId) async {
     try {
-      _friends.removeWhere((friend) => friend.id == friendId);
+      // Remove from Firestore first
+      final success = await removeFriendshipFromFirestore(friendId);
+      if (!success) return false;
+
+      // Remove from local data (already done in removeFriendshipFromFirestore)
       _friendsWeeklyStats.remove(friendId);
 
+      // Emit updated data to streams
       _friendsController.add(_friends);
       await _saveLocalData();
+
+      print('✅ Friend removed: $friendId');
       return true;
     } catch (e) {
       print('Error removing friend: $e');
+      return false;
+    }
+  }
+
+  // Remove friendship relationship from Firestore (when unfriending)
+  Future<bool> removeFriendshipFromFirestore(String friendId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return false;
+
+      final batch = _firestore.batch();
+
+      // Remove friend from current user's friends collection
+      final currentUserFriendRef = _firestore
+          .collection('user_friends')
+          .doc(currentUser.uid)
+          .collection('friends')
+          .doc(friendId);
+
+      // Remove current user from friend's friends collection
+      final friendUserFriendRef = _firestore
+          .collection('user_friends')
+          .doc(friendId)
+          .collection('friends')
+          .doc(currentUser.uid);
+
+      batch.delete(currentUserFriendRef);
+      batch.delete(friendUserFriendRef);
+
+      await batch.commit();
+
+      // Refresh local data
+      await _loadRealFriendsFromFirestore();
+
+      print('✅ Friendship removed between ${currentUser.uid} and $friendId');
+      return true;
+    } catch (e) {
+      print('❌ Error removing friendship: $e');
       return false;
     }
   }
@@ -781,13 +885,164 @@ class CommunityService {
   }
 
   // Refresh data
-  void refreshData() {
+  Future<void> refreshData() async {
+    await _loadRealFriendsFromFirestore();
     _updateWeeklyStats();
+  }
+
+  // Debug method to check Firebase friendship data
+  Future<void> debugFriendshipData() async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        print('DEBUG: No current user');
+        return;
+      }
+
+      print('DEBUG: Current user UID: ${currentUser.uid}');
+
+      // Check user_friends collection
+      final friendsSnapshot = await _firestore
+          .collection('user_friends')
+          .doc(currentUser.uid)
+          .collection('friends')
+          .get();
+
+      print('DEBUG: Found ${friendsSnapshot.docs.length} friend documents');
+
+      for (var doc in friendsSnapshot.docs) {
+        print('DEBUG: Friend doc ID: ${doc.id}, data: ${doc.data()}');
+
+        // Check if friend user exists
+        final friendUserDoc = await _firestore
+            .collection('users')
+            .doc(doc.id)
+            .get();
+
+        if (friendUserDoc.exists) {
+          print('DEBUG: Friend user data: ${friendUserDoc.data()}');
+        } else {
+          print(
+            'DEBUG: Friend user ${doc.id} does not exist in users collection',
+          );
+        }
+      }
+
+      // Check all users
+      final allUsersSnapshot = await _firestore.collection('users').get();
+
+      print('DEBUG: Total users in database: ${allUsersSnapshot.docs.length}');
+      for (var doc in allUsersSnapshot.docs) {
+        print('DEBUG: User ${doc.id}: ${doc.data()}');
+      }
+    } catch (e) {
+      print('DEBUG: Error checking friendship data: $e');
+    }
+  }
+
+  // Helper method to manually create friendship relationship in Firebase
+  Future<void> createFriendshipManually(String userId1, String userId2) async {
+    try {
+      final batch = _firestore.batch();
+
+      // Add user2 as friend of user1
+      final user1FriendRef = _firestore
+          .collection('user_friends')
+          .doc(userId1)
+          .collection('friends')
+          .doc(userId2);
+
+      // Add user1 as friend of user2
+      final user2FriendRef = _firestore
+          .collection('user_friends')
+          .doc(userId2)
+          .collection('friends')
+          .doc(userId1);
+
+      final now = DateTime.now();
+      final friendshipData = {
+        'friendSince': Timestamp.fromDate(now),
+        'createdAt': Timestamp.fromDate(now),
+      };
+
+      batch.set(user1FriendRef, friendshipData);
+      batch.set(user2FriendRef, friendshipData);
+
+      await batch.commit();
+
+      print('✅ Friendship created between $userId1 and $userId2');
+
+      // Refresh data after creating friendship
+      await _loadRealFriendsFromFirestore();
+    } catch (e) {
+      print('❌ Error creating friendship: $e');
+    }
   }
 
   // Dispose
   void dispose() {
     _friendsController.close();
     _friendRequestsController.close();
+  }
+
+  // Force emit current friends data (useful for immediate UI update)
+  void emitCurrentData() {
+    print(
+      'Emitting current data: ${_friends.length} friends, ${_friendRequests.length} requests',
+    );
+    _friendsController.add(_friends);
+    _friendRequestsController.add(_friendRequests);
+  }
+
+  // Check if there's a pending friend request between current user and target user
+  Future<bool> hasPendingFriendRequest(String targetUserId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return false;
+
+      // Check if current user sent a request to target user
+      final sentRequest = await _firestore
+          .collection('friend_requests')
+          .where('fromUserId', isEqualTo: currentUser.uid)
+          .where('toUserId', isEqualTo: targetUserId)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+
+      if (sentRequest.docs.isNotEmpty) return true;
+
+      // Check if target user sent a request to current user
+      final receivedRequest = await _firestore
+          .collection('friend_requests')
+          .where('fromUserId', isEqualTo: targetUserId)
+          .where('toUserId', isEqualTo: currentUser.uid)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+
+      return receivedRequest.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking pending friend request: $e');
+      return false;
+    }
+  }
+
+  // Check if user is already a friend or has pending request
+  Future<String> getFriendshipStatus(String userId) async {
+    // Check if already friends (both locally and in Firestore for accuracy)
+    final isLocalFriend = _isAlreadyFriend(userId);
+    final isFirestoreFriend = await isAlreadyFriendInFirestore(userId);
+
+    if (isLocalFriend || isFirestoreFriend) {
+      return 'friends';
+    }
+
+    // Check if has pending request
+    final hasPending = await hasPendingFriendRequest(userId);
+    if (hasPending) {
+      return 'pending';
+    }
+
+    return 'none';
   }
 }
