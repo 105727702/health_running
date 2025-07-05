@@ -25,6 +25,8 @@ class GoogleSignInButton extends StatelessWidget {
           shadowColor: Colors.black26,
           side: const BorderSide(color: Colors.grey, width: 0.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // Thêm padding để tránh tràn viền
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         child: isLoading
             ? const SizedBox(
@@ -37,6 +39,7 @@ class GoogleSignInButton extends StatelessWidget {
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min, // Thêm này để tránh tràn
                 children: [
                   // Google logo SVG with PNG fallback
                   SvgPicture.asset(
@@ -58,9 +61,17 @@ class GoogleSignInButton extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Sign in with Google',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  // Sử dụng Flexible để text có thể wrap nếu cần
+                  const Flexible(
+                    child: Text(
+                      'Sign in with Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis, // Thêm ellipsis nếu quá dài
+                      maxLines: 1,
+                    ),
                   ),
                 ],
               ),

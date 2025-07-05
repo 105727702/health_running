@@ -82,13 +82,33 @@ class TrackingDataService {
   // Save session when tracking stops
   void saveSession(TrackingState finalState) {
     if (finalState.totalDistance > 0) {
+      // Calculate actual duration from tracking state
+      int actualDuration = 0;
+      DateTime sessionStartTime = DateTime.now();
+      DateTime sessionEndTime = DateTime.now();
+
+      if (finalState.startTime != null && finalState.endTime != null) {
+        actualDuration = finalState.endTime!
+            .difference(finalState.startTime!)
+            .inMinutes;
+        sessionStartTime = finalState.startTime!;
+        sessionEndTime = finalState.endTime!;
+      } else if (finalState.startTime != null) {
+        // If no end time, use current time as end time
+        sessionEndTime = DateTime.now();
+        actualDuration = sessionEndTime
+            .difference(finalState.startTime!)
+            .inMinutes;
+        sessionStartTime = finalState.startTime!;
+      }
+
       final session = TrackingSession(
         distance: finalState.totalDistance,
         calories: finalState.totalCalories,
-        duration: 30, // Mock duration - in real app this would be calculated
+        duration: actualDuration,
         activityType: finalState.activityType,
-        startTime: DateTime.now().subtract(Duration(minutes: 30)), // Mock data
-        endTime: DateTime.now(),
+        startTime: sessionStartTime,
+        endTime: sessionEndTime,
         route: finalState.route,
       );
 
@@ -203,7 +223,7 @@ class TrackingDataService {
       TrackingSession(
         distance: 1.2,
         calories: 85.0,
-        duration: 15,
+        duration: 15, // 15 minutes actual tracking time
         activityType: 'walking',
         startTime: DateTime.now().subtract(Duration(hours: 2)),
         endTime: DateTime.now().subtract(Duration(hours: 1, minutes: 45)),
@@ -212,7 +232,7 @@ class TrackingDataService {
       TrackingSession(
         distance: 1.3,
         calories: 95.0,
-        duration: 18,
+        duration: 18, // 18 minutes actual tracking time
         activityType: 'running',
         startTime: DateTime.now().subtract(Duration(hours: 4)),
         endTime: DateTime.now().subtract(Duration(hours: 3, minutes: 42)),

@@ -314,9 +314,44 @@ class _HealthDashboardState extends State<HealthDashboard> {
                 ),
                 Expanded(
                   child: _buildSessionStat(
-                    'Route Points',
-                    '${currentState.route.length}',
-                    Icons.timeline,
+                    'Time',
+                    _getSessionElapsedTime(currentState),
+                    Icons.timer,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Additional info row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.deepPurple.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timeline, color: Colors.deepPurple, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${currentState.route.length} points',
+                        style: TextStyle(
+                          color: Colors.deepPurple,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -325,6 +360,26 @@ class _HealthDashboardState extends State<HealthDashboard> {
         ),
       ),
     );
+  }
+
+  // Calculate elapsed time for current session
+  String _getSessionElapsedTime(dynamic currentState) {
+    if (currentState.startTime == null) {
+      return '00:00';
+    }
+
+    final now = DateTime.now();
+    final elapsed = now.difference(currentState.startTime!);
+
+    final hours = elapsed.inHours;
+    final minutes = elapsed.inMinutes.remainder(60);
+    final seconds = elapsed.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
   }
 
   Widget _buildSessionStat(String title, String value, IconData icon) {
@@ -740,7 +795,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
                 Icon(Icons.trending_up, color: Colors.deepPurple, size: 24),
                 const SizedBox(width: 8),
                 Text(
-                  'Progress Overview',
+                  'Daily Goals Progress',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

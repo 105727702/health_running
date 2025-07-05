@@ -4,7 +4,7 @@ import "../../widgets/health_dashboard.dart";
 import "map_page.dart";
 import "my_profile_page.dart";
 import "help_page.dart";
-import "search_page.dart";
+import "community_page.dart";
 import "settings_page.dart";
 import "goals_settings_page.dart";
 
@@ -22,7 +22,7 @@ class _MainScreenState extends State<MainScreen>
 
   final List<Widget> _pages = [
     const MainContentPage(),
-    const SearchPage(),
+    const CommunityPage(), // Updated to CommunityPage
     const MapPage(title: "Map"),
     const MyProfilePage(),
     const HelpPage(),
@@ -152,9 +152,9 @@ class _MainScreenState extends State<MainScreen>
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.search),
+                child: const Icon(Icons.people),
               ),
-              label: 'Search',
+              label: 'Community',
             ),
             BottomNavigationBarItem(
               icon: AnimatedContainer(

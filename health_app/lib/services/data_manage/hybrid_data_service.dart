@@ -117,13 +117,33 @@ class HybridDataService {
           )
           .toList();
 
+      // Calculate actual duration from tracking state
+      int actualDuration = 0;
+      DateTime sessionStartTime = DateTime.now();
+      DateTime sessionEndTime = DateTime.now();
+
+      if (finalState.startTime != null && finalState.endTime != null) {
+        actualDuration = finalState.endTime!
+            .difference(finalState.startTime!)
+            .inMinutes;
+        sessionStartTime = finalState.startTime!;
+        sessionEndTime = finalState.endTime!;
+      } else if (finalState.startTime != null) {
+        // If no end time, use current time as end time
+        sessionEndTime = DateTime.now();
+        actualDuration = sessionEndTime
+            .difference(finalState.startTime!)
+            .inMinutes;
+        sessionStartTime = finalState.startTime!;
+      }
+
       final session = TrackingSession(
         distance: finalState.totalDistance,
         calories: finalState.totalCalories,
-        duration: 30, // Should be calculated from actual tracking time
+        duration: actualDuration,
         activityType: finalState.activityType,
-        startTime: DateTime.now().subtract(const Duration(minutes: 30)),
-        endTime: DateTime.now(),
+        startTime: sessionStartTime,
+        endTime: sessionEndTime,
         route: routeData,
       );
 
@@ -691,7 +711,7 @@ class HybridDataService {
       TrackingSession(
         distance: 1.2,
         calories: 85.0,
-        duration: 15,
+        duration: 15, // 15 minutes actual tracking time
         activityType: 'walking',
         startTime: DateTime.now().subtract(const Duration(hours: 2)),
         endTime: DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
@@ -807,27 +827,32 @@ class HybridDataService {
 
       // Delete from local storage
       final dateString = _formatDate(sessionDate);
-      
+
       // If it's today's session, remove from today's sessions
       if (dateString == _formatDate(DateTime.now())) {
-        _todaySessions.removeWhere((session) => session.toJson().toString().contains(sessionId));
+        _todaySessions.removeWhere(
+          (session) => session.toJson().toString().contains(sessionId),
+        );
         _updateDailyTotalsFromSessions();
         await _saveLocalData();
       } else {
         // Remove from historical data
         if (_historicalData.containsKey(dateString)) {
           final dayData = _historicalData[dateString]!;
-          dayData.sessions.removeWhere((session) => session.toJson().toString().contains(sessionId));
-          
+          dayData.sessions.removeWhere(
+            (session) => session.toJson().toString().contains(sessionId),
+          );
+
           // Update daily totals for that day
           double dayDistance = 0, dayCalories = 0;
           int daySteps = 0;
           for (final session in dayData.sessions) {
             dayDistance += session.distance;
             dayCalories += session.calories;
-            daySteps += (session.distance * 1000).round(); // Rough steps calculation
+            daySteps += (session.distance * 1000)
+                .round(); // Rough steps calculation
           }
-          
+
           _historicalData[dateString] = DailySummary(
             date: dateString,
             totalDistance: dayDistance,
@@ -836,7 +861,7 @@ class HybridDataService {
             sessionCount: dayData.sessions.length,
             sessions: dayData.sessions,
           );
-          
+
           await _saveLocalData();
         }
       }
@@ -890,11 +915,12 @@ class HybridDataService {
 
       // Update in local storage
       final dateString = _formatDate(sessionDate);
-      
+
       // If it's today's session, update today's sessions
       if (dateString == _formatDate(DateTime.now())) {
-        final index = _todaySessions.indexWhere((session) => 
-          session.toJson().toString().contains(sessionId));
+        final index = _todaySessions.indexWhere(
+          (session) => session.toJson().toString().contains(sessionId),
+        );
         if (index != -1) {
           _todaySessions[index] = updatedSession;
           _updateDailyTotalsFromSessions();
@@ -904,21 +930,23 @@ class HybridDataService {
         // Update in historical data
         if (_historicalData.containsKey(dateString)) {
           final dayData = _historicalData[dateString]!;
-          final index = dayData.sessions.indexWhere((session) => 
-            session.toJson().toString().contains(sessionId));
-          
+          final index = dayData.sessions.indexWhere(
+            (session) => session.toJson().toString().contains(sessionId),
+          );
+
           if (index != -1) {
             dayData.sessions[index] = updatedSession;
-            
+
             // Recalculate daily totals for that day
             double dayDistance = 0, dayCalories = 0;
             int daySteps = 0;
             for (final session in dayData.sessions) {
               dayDistance += session.distance;
               dayCalories += session.calories;
-              daySteps += (session.distance * 1000).round(); // Rough steps calculation
+              daySteps += (session.distance * 1000)
+                  .round(); // Rough steps calculation
             }
-            
+
             _historicalData[dateString] = DailySummary(
               date: dateString,
               totalDistance: dayDistance,
@@ -927,7 +955,7 @@ class HybridDataService {
               sessionCount: dayData.sessions.length,
               sessions: dayData.sessions,
             );
-            
+
             await _saveLocalData();
           }
         }
@@ -944,7 +972,7 @@ class HybridDataService {
   // Get session by ID for editing
   TrackingSession? getSessionById(String sessionId, DateTime sessionDate) {
     final dateString = _formatDate(sessionDate);
-    
+
     // Check today's sessions
     if (dateString == _formatDate(DateTime.now())) {
       return _todaySessions.firstWhere(
@@ -961,7 +989,7 @@ class HybridDataService {
         );
       }
     }
-    
+
     return null;
   }
 }

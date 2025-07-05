@@ -560,10 +560,10 @@ class _FirebaseTestPageState extends State<FirebaseTestPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '• Manual Backup: Thực hiện backup ngay lập tức\n'
-                                '• Simulate 24h: Tạo dữ liệu test và thực hiện backup\n'
-                                '• Auto Backup: Tự động backup lúc 2:00 AM mỗi ngày\n'
-                                '• Dữ liệu được lưu lên Firebase Firestore',
+                                '• Manual Backup: Backup data immediately\n'
+                                '• Simulate 24h: Create test data and perform backup\n'
+                                '• Auto Backup: Automatically backup at 2:00 AM every day\n'
+                                '• Data is stored in Firebase Firestore',
                                 style: TextStyle(fontSize: 12, height: 1.4),
                               ),
                             ],

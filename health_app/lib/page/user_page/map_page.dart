@@ -116,6 +116,54 @@ class _MapPageState extends State<MapPage> {
                     ),
                   ],
                 ),
+
+                // Timer Display (visible during tracking)
+                if (_trackingState.isTracking)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.green.shade300,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          color: Colors.green.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _getElapsedTime(),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Detailed stats
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -127,15 +175,52 @@ class _MapPageState extends State<MapPage> {
                       icon: Icons.route,
                     ),
                     StatCard(
-                      title: 'Calo',
+                      title: 'Calories',
                       value:
                           '${_trackingState.totalCalories.toStringAsFixed(0)} cal',
                       icon: Icons.local_fire_department,
                     ),
                     StatCard(
-                      title: 'Activities',
-                      value: _trackingState.activityType,
-                      icon: Icons.directions_run,
+                      title: 'Time',
+                      value: _getElapsedTime(),
+                      icon: Icons.timer,
+                    ),
+                  ],
+                ),
+                // Activity type row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.deepPurple.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.directions_run,
+                            color: Colors.deepPurple,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _trackingState.activityType.toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -348,6 +433,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _startTracking() {
+    final now = DateTime.now();
     setState(() {
       _trackingState = _trackingState.copyWith(
         isTracking: true,
@@ -355,6 +441,8 @@ class _MapPageState extends State<MapPage> {
         totalDistance: 0.0,
         totalCalories: 0.0,
         lastPosition: null,
+        startTime: now,
+        endTime: null,
       );
     });
 
@@ -364,7 +452,8 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _stopTracking() {
-    final finalState = _trackingState.copyWith(isTracking: false);
+    final now = DateTime.now();
+    final finalState = _trackingState.copyWith(isTracking: false, endTime: now);
 
     setState(() {
       _trackingState = finalState;
@@ -385,6 +474,8 @@ class _MapPageState extends State<MapPage> {
         totalDistance: 0.0,
         totalCalories: 0.0,
         lastPosition: null,
+        startTime: null,
+        endTime: null,
       );
     });
 
@@ -410,10 +501,33 @@ class _MapPageState extends State<MapPage> {
     _updateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_trackingState.isTracking && mounted) {
         setState(() {
-          // Force UI update
+          // Force UI update to refresh timer and other live data
         });
+
+        // Update the global tracking service with current state
+        _trackingDataService.updateTrackingState(_trackingState);
       }
     });
+  }
+
+  // Calculate elapsed time
+  String _getElapsedTime() {
+    if (_trackingState.startTime == null) {
+      return '00:00:00';
+    }
+
+    final now = DateTime.now();
+    final elapsed = now.difference(_trackingState.startTime!);
+
+    final hours = elapsed.inHours;
+    final minutes = elapsed.inMinutes.remainder(60);
+    final seconds = elapsed.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
   }
 
   void _updatePosition(LatLng newPosition) {
