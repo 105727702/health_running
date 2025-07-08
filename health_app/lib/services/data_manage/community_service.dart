@@ -501,7 +501,7 @@ class CommunityService {
         'message': message,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
+    
       // Refresh data to ensure UI shows correct status
       await _loadRealFriendRequests();
       _friendRequestsController.add(_friendRequests);
