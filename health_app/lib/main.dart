@@ -4,7 +4,7 @@ import 'firebase_options.dart';
 import 'page/user_page/start_view.dart';
 import 'utils/firebase_utils.dart';
 import 'services/data_monitoring/firebase_analytics_service.dart';
-import 'services/data_monitoring/data_platform_manager.dart';
+import 'page/workflow_test/data_platform_manager.dart';
 import 'services/data_manage/auto_backup_service.dart';
 
 void main() async {
@@ -23,10 +23,10 @@ void main() async {
 
     print(' Firebase services initialized successfully');
 
-    // Initialize Comprehensive Data Platform
-    print(' Initializing Comprehensive Data Platform...');
-    await DataPlatformManager().initialize();
-    print(' Comprehensive Data Platform initialized successfully');
+    // // Initialize Comprehensive Data Platform
+    // print(' Initializing Comprehensive Data Platform...');
+    // await DataPlatformManager().initialize();
+    // print(' Comprehensive Data Platform initialized successfully');
 
     // Initialize Auto Backup Service
     print(' Initializing Auto Backup Service...');
