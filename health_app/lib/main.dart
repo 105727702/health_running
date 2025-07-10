@@ -4,7 +4,7 @@ import 'firebase_options.dart';
 import 'page/user_page/start_view.dart';
 import 'utils/firebase_utils.dart';
 import 'services/data_monitoring/firebase_analytics_service.dart';
-import 'workflow_test/data_platform_manager.dart';
+import 'test/data_platform_manager.dart';
 import 'services/data_manage/auto_backup_service.dart';
 
 void main() async {
